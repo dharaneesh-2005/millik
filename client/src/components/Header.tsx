@@ -59,7 +59,7 @@ export default function Header() {
               <motion.img 
                 src={logoPath} 
                 alt="Millikit Logo" 
-                className="h-10 md:h-14 w-auto" 
+                className="h-12 md:h-18 w-auto" 
                 whileHover={{ rotate: [0, -5, 5, -5, 0], transition: { duration: 0.5 } }}
               />
             </Link>
@@ -76,7 +76,7 @@ export default function Header() {
               >
                 <Link 
                   href={path} 
-                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors text-lg`}
+                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors text-xl`}
                 >
                   {path === '/' ? t('home') : path === '/products' ? t('products') : t('contact')}
                 </Link>
@@ -99,7 +99,7 @@ export default function Header() {
               whileHover={{ scale: 1.1 }}
             >
               <Link href="/admin/login" className="text-gray-700 hover:text-green-600 transition-colors">
-                <i className="fas fa-user-shield text-xl"></i>
+                <i className="fas fa-user-shield text-2xl"></i>
               </Link>
             </motion.div>
             
@@ -111,11 +111,11 @@ export default function Header() {
               whileHover={{ scale: 1.1 }}
             >
               <Link href="/cart" className="relative text-gray-700 hover:text-green-600 transition-colors">
-                <i className="fas fa-shopping-cart text-xl"></i>
+                <i className="fas fa-shopping-cart text-2xl"></i>
                 <AnimatePresence>
                   {cartItemCount > 0 && (
                     <motion.span 
-                      className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full"
+                      className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs w-6 h-6 flex items-center justify-center rounded-full font-bold shadow-sm"
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
@@ -142,7 +142,7 @@ export default function Header() {
               transition={{ delay: 0.7 }}
               whileTap={{ scale: 0.9 }}
             >
-              <i className={`fas ${showMobileMenu ? 'fa-times' : 'fa-bars'}`}></i>
+              <i className={`fas ${showMobileMenu ? 'fa-times' : 'fa-bars'} text-2xl`}></i>
             </motion.button>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function Header() {
                 >
                   <Link 
                     href={path}
-                    className={`block py-3 px-4 ${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors border-b border-gray-100 last:border-b-0`}
+                    className={`block py-4 px-5 ${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors border-b border-gray-100 last:border-b-0 text-lg`}
                     onClick={() => setShowMobileMenu(false)}
                   >
                     {path === '/' ? t('home') : 

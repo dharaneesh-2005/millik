@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { motion } from "framer-motion";
+import { Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 // Form validation schema
@@ -40,7 +41,17 @@ export default function Contact() {
     try {
       setIsSubmitting(true);
       
-      await apiRequest("POST", "/api/contact", data);
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit contact form');
+      }
       
       toast({
         title: "Success!",
@@ -64,10 +75,73 @@ export default function Contact() {
   return (
     <>
       {/* Hero Section */}
-      <section className="contact-hero-gradient pt-32 pb-20">
-        <div className="container mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{t('contactUs')}</h1>
-          <p className="text-green-100 text-lg">{t('getInTouch')}</p>
+      <section className="pt-32 pb-20 bg-gradient-to-br from-green-600 to-green-700 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute inset-0 bg-noise opacity-10 mix-blend-overlay pointer-events-none"></div>
+        <motion.div 
+          className="absolute -bottom-10 -right-10 w-64 h-64 bg-green-500/20 rounded-full" 
+          animate={{ 
+            scale: [1, 1.1, 1],
+            rotate: [0, 10, 0],
+          }}
+          transition={{ 
+            duration: 15, 
+            repeat: Infinity,
+            repeatType: "reverse" 
+          }}
+        />
+        <motion.div 
+          className="absolute -left-16 top-16 w-40 h-40 bg-amber-400/10 rounded-full"
+          animate={{ 
+            scale: [1, 1.15, 1],
+            y: [0, 10, 0],
+          }}
+          transition={{ 
+            duration: 12, 
+            repeat: Infinity,
+            repeatType: "reverse" 
+          }}
+        />
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+          >
+            <motion.h1 
+              className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1 }}
+            >
+              {t('contactUs')}
+            </motion.h1>
+            <motion.p 
+              className="text-green-50 text-xl max-w-2xl leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+            >
+              {t('getInTouch')}
+            </motion.p>
+          </motion.div>
+          
+          {/* Breadcrumb */}
+          <motion.div 
+            className="flex items-center space-x-2 mt-4 text-green-100/80"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.3 }}
+          >
+            <Link href="/" className="hover:text-white transition-colors">
+              <motion.span whileHover={{ x: -3 }} transition={{ type: "spring", stiffness: 300 }}>
+                {t('home')}
+              </motion.span>
+            </Link>
+            <span>/</span>
+            <span className="text-white font-medium">{t('contactUs')}</span>
+          </motion.div>
         </div>
       </section>
 
@@ -76,7 +150,12 @@ export default function Contact() {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12">
             {/* Contact Form */}
-            <div className="bg-white p-8 rounded-xl shadow-lg">
+            <motion.div 
+              className="bg-white p-8 rounded-xl shadow-lg"
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7 }}
+            >
               <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('send')}</h2>
               <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="space-y-6">
@@ -135,10 +214,12 @@ export default function Contact() {
                     ></textarea>
                     {errors.message && <p className="mt-1 text-sm text-red-500">{errors.message.message}</p>}
                   </div>
-                  <button 
+                  <motion.button 
                     type="submit" 
                     className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
                     disabled={isSubmitting}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     {isSubmitting ? (
                       <>
@@ -149,17 +230,26 @@ export default function Contact() {
                         Sending...
                       </>
                     ) : t('send')}
-                  </button>
+                  </motion.button>
                 </div>
               </form>
-            </div>
+            </motion.div>
 
             {/* Contact Information */}
-            <div className="space-y-8">
+            <motion.div 
+              className="space-y-8"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+            >
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('contactInfo')}</h2>
                 <div className="space-y-4">
-                  <div className="flex items-start space-x-4">
+                  <motion.div 
+                    className="flex items-start space-x-4"
+                    whileHover={{ x: 5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                       <i className="fas fa-map-marker-alt text-xl text-green-600"></i>
                     </div>
@@ -171,8 +261,12 @@ export default function Contact() {
                         Tamil Nadu, India 600040
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
+                  </motion.div>
+                  <motion.div 
+                    className="flex items-start space-x-4"
+                    whileHover={{ x: 5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                       <i className="fas fa-phone text-xl text-green-600"></i>
                     </div>
@@ -183,8 +277,12 @@ export default function Contact() {
                         +91 987 654 321
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
+                  </motion.div>
+                  <motion.div 
+                    className="flex items-start space-x-4"
+                    whileHover={{ x: 5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                       <i className="fas fa-envelope text-xl text-green-600"></i>
                     </div>
@@ -195,7 +293,7 @@ export default function Contact() {
                         support@millikit.com
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               </div>
 
@@ -203,18 +301,27 @@ export default function Contact() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('businessHours')}</h2>
                 <div className="space-y-2">
-                  <div className="flex justify-between">
+                  <motion.div 
+                    className="flex justify-between p-3 rounded-lg hover:bg-green-50 transition-colors"
+                    whileHover={{ x: 5 }}
+                  >
                     <span className="text-gray-600">Monday - Friday</span>
                     <span className="text-gray-800 font-medium">9:00 AM - 6:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
+                  </motion.div>
+                  <motion.div 
+                    className="flex justify-between p-3 rounded-lg hover:bg-green-50 transition-colors"
+                    whileHover={{ x: 5 }}
+                  >
                     <span className="text-gray-600">Saturday</span>
                     <span className="text-gray-800 font-medium">10:00 AM - 4:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
+                  </motion.div>
+                  <motion.div 
+                    className="flex justify-between p-3 rounded-lg hover:bg-green-50 transition-colors"
+                    whileHover={{ x: 5 }}
+                  >
                     <span className="text-gray-600">Sunday</span>
                     <span className="text-gray-800 font-medium">Closed</span>
-                  </div>
+                  </motion.div>
                 </div>
               </div>
 
@@ -222,21 +329,41 @@ export default function Contact() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('connectWithUs')}</h2>
                 <div className="flex space-x-4">
-                  <a href="#" className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors">
+                  <motion.a 
+                    href="#" 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors"
+                    whileHover={{ y: -5, scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
                     <i className="fab fa-facebook-f text-xl text-green-600"></i>
-                  </a>
-                  <a href="#" className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors">
+                  </motion.a>
+                  <motion.a 
+                    href="#" 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors"
+                    whileHover={{ y: -5, scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
                     <i className="fab fa-twitter text-xl text-green-600"></i>
-                  </a>
-                  <a href="#" className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors">
+                  </motion.a>
+                  <motion.a 
+                    href="#" 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors"
+                    whileHover={{ y: -5, scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
                     <i className="fab fa-instagram text-xl text-green-600"></i>
-                  </a>
-                  <a href="#" className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors">
+                  </motion.a>
+                  <motion.a 
+                    href="#" 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors"
+                    whileHover={{ y: -5, scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
                     <i className="fab fa-linkedin-in text-xl text-green-600"></i>
-                  </a>
+                  </motion.a>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import ProductCard from "@/components/ProductCard";
 import { Product } from "@shared/schema";
@@ -115,32 +117,107 @@ export default function Products() {
   return (
     <>
       {/* Products Header */}
-      <section className="pt-24 pb-12 bg-gradient-to-r from-green-700 to-green-600">
-        <div className="container mx-auto px-6">
-          <h1 className="text-4xl font-bold text-white mb-4">{t('products')}</h1>
-          <p className="text-green-100 text-lg">{t('getInTouch')}</p>
+      <section className="pt-32 pb-16 bg-gradient-to-br from-green-600 to-green-700 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute inset-0 bg-noise opacity-10 mix-blend-overlay pointer-events-none"></div>
+        <motion.div 
+          className="absolute -bottom-10 -right-10 w-64 h-64 bg-green-500/20 rounded-full" 
+          animate={{ 
+            scale: [1, 1.1, 1],
+            rotate: [0, 10, 0],
+          }}
+          transition={{ 
+            duration: 15, 
+            repeat: Infinity,
+            repeatType: "reverse" 
+          }}
+        />
+        <motion.div 
+          className="absolute -left-16 top-16 w-40 h-40 bg-amber-400/10 rounded-full"
+          animate={{ 
+            scale: [1, 1.15, 1],
+            y: [0, 10, 0],
+          }}
+          transition={{ 
+            duration: 12, 
+            repeat: Infinity,
+            repeatType: "reverse" 
+          }}
+        />
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+          >
+            <motion.h1 
+              className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1 }}
+            >
+              {t('products')}
+            </motion.h1>
+            <motion.p 
+              className="text-green-50 text-xl max-w-2xl leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+            >
+              Discover our range of high-quality, organic millet products sourced directly from farmers
+            </motion.p>
+          </motion.div>
           
           {/* Breadcrumb */}
-          <div className="flex items-center space-x-2 mt-4 text-green-100">
-            <a href="/" className="hover:text-white transition-colors">{t('home')}</a>
+          <motion.div 
+            className="flex items-center space-x-2 mt-4 text-green-100/80"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.3 }}
+          >
+            <Link href="/" className="hover:text-white transition-colors">
+              <motion.span whileHover={{ x: -3 }} transition={{ type: "spring", stiffness: 300 }}>
+                {t('home')}
+              </motion.span>
+            </Link>
             <span>/</span>
-            <span className="text-white">{t('products')}</span>
-          </div>
+            <span className="text-white font-medium">{t('products')}</span>
+          </motion.div>
         </div>
       </section>
       
       {/* Filter Section */}
-      <section className="py-8 bg-white border-b">
+      <section className="py-10 bg-white border-b shadow-sm relative z-20">
         <div className="container mx-auto px-6">
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Search products..."
-              className="w-full md:w-1/3 px-4 py-2 border rounded-full text-gray-700 focus:outline-none focus:border-green-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <motion.div 
+            className="bg-white rounded-xl shadow-md p-6 mb-6"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+              <div className="flex-grow">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i className="fas fa-search text-gray-400"></i>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search for millet products..."
+                    className="w-full pl-10 pr-4 py-3 border-gray-200 border rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 px-3 py-2 rounded-lg flex items-center gap-2">
+                <i className="fas fa-filter text-gray-500"></i>
+                <span className="text-sm text-gray-600 font-medium">Filters:</span>
+              </div>
+            </div>
+          </motion.div>
           
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-4">
@@ -204,7 +281,7 @@ export default function Products() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className={`${viewMode === "grid" ? "grid-view" : "list-view"}`}>
+            <div className={viewMode === "grid" ? "grid md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}>
               {currentProducts.map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
