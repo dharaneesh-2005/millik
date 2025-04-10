@@ -983,6 +983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders API routes
   app.post("/api/checkout", async (req, res) => {
     try {
+<<<<<<< HEAD
       console.log("==========================================");
       console.log("Checkout endpoint hit");
       console.log("Request body:", JSON.stringify(req.body, null, 2));
@@ -1196,6 +1197,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: "Error processing checkout",
         error: error instanceof Error ? error.message : String(error)
+=======
+      const { 
+        email, 
+        phone, 
+        shippingAddress, 
+        shippingCity, 
+        shippingState, 
+        shippingZip, 
+        shippingCountry,
+        paymentMethod,
+        cartItems: items,
+        notes
+      } = req.body;
+      
+      // Validate required fields
+      if (!email || !phone || !shippingAddress || !shippingCity || !shippingState || !shippingZip || !paymentMethod || !items) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Missing required fields" 
+        });
+      }
+      
+      let sessionId = req.headers["session-id"] as string;
+      if (!sessionId) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Session ID is required" 
+        });
+      }
+      
+      // Get cart items and calculate totals
+      const cartItems = await storage.getCartItems(sessionId);
+      if (!cartItems || cartItems.length === 0) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Cart is empty" 
+        });
+      }
+      
+      // Get product details for each cart item
+      const orderItems = await Promise.all(
+        cartItems.map(async (item) => {
+          const product = await storage.getProductById(item.productId);
+          if (!product) {
+            throw new Error(`Product ${item.productId} not found`);
+          }
+          
+          // Extract weight from metaData if available
+          let weight = '';
+          let priceToUse = product.price;
+          
+          if (item.metaData) {
+            try {
+              const metaData = JSON.parse(item.metaData);
+              weight = metaData.weight || '';
+              
+              // If we have weight-specific pricing, use that
+              if (weight && product.weightPrices) {
+                const weightPrices = JSON.parse(product.weightPrices);
+                if (weightPrices[weight] && weightPrices[weight].price) {
+                  priceToUse = weightPrices[weight].price;
+                }
+              }
+            } catch (e) {
+              console.warn('Error parsing cart item metaData:', e);
+            }
+          }
+          
+          // Calculate subtotal (price * quantity)
+          const price = parseFloat(priceToUse);
+          const subtotal = price * item.quantity;
+          
+          return {
+            productId: item.productId,
+            name: product.name,
+            price: price.toString(),
+            quantity: item.quantity,
+            subtotal: subtotal.toString(),
+            weight,
+            metaData: item.metaData
+          };
+        })
+      );
+      
+      // Calculate order totals
+      const subtotalAmount = orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+      
+      // Get shipping settings
+      const shippingRateRaw = await storage.getSetting('shipping_rate') || '50';
+      const freeShippingThresholdRaw = await storage.getSetting('free_shipping_threshold') || '1000';
+      const taxRateRaw = await storage.getSetting('tax_rate') || '5';
+      
+      const shippingRate = parseFloat(shippingRateRaw);
+      const freeShippingThreshold = parseFloat(freeShippingThresholdRaw);
+      const taxRate = parseFloat(taxRateRaw);
+      
+      // Calculate shipping amount
+      const shippingAmount = subtotalAmount >= freeShippingThreshold ? 0 : shippingRate;
+      
+      // Calculate tax amount
+      const taxAmount = (subtotalAmount * taxRate) / 100;
+      
+      // Calculate total amount
+      const totalAmount = subtotalAmount + shippingAmount + taxAmount;
+      
+      // Generate order number
+      const { generateOrderNumber } = await import('./phonepe');
+      const orderNumber = generateOrderNumber();
+      
+      // Create order
+      const order = await storage.createOrder({
+        sessionId,
+        orderNumber,
+        status: 'pending',
+        totalAmount: totalAmount.toString(),
+        subtotalAmount: subtotalAmount.toString(),
+        taxAmount: taxAmount.toString(),
+        shippingAmount: shippingAmount.toString(),
+        discountAmount: '0',
+        paymentMethod,
+        paymentStatus: 'pending',
+        email,
+        phone,
+        shippingAddress,
+        shippingCity,
+        shippingState,
+        shippingZip,
+        shippingCountry: shippingCountry || 'India',
+        items: JSON.stringify(orderItems),
+        notes
+      });
+      
+      // Create order items
+      await Promise.all(
+        orderItems.map(item => storage.createOrderItem({
+          orderId: order.id,
+          productId: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+          weight: item.weight,
+          metaData: item.metaData
+        }))
+      );
+      
+      // If payment method is PhonePe, create a payment request
+      if (paymentMethod === 'phonepay') {
+        const { createPaymentRequest } = await import('./phonepe');
+        const callbackUrl = `${req.protocol}://${req.get('host')}/api/payment/callback`;
+        
+        const paymentRequest = await createPaymentRequest(
+          totalAmount,
+          orderNumber,
+          email,
+          phone,
+          callbackUrl
+        );
+        
+        if (paymentRequest.success) {
+          // Update order with transaction ID
+          await storage.updateOrder(order.id, {
+            paymentId: paymentRequest.transactionId
+          });
+          
+          res.status(200).json({
+            success: true,
+            order,
+            redirectUrl: paymentRequest.paymentUrl,
+            paymentId: paymentRequest.transactionId
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            message: paymentRequest.error
+          });
+        }
+      } else {
+        // For COD or other payment methods, just return the order
+        res.status(200).json({
+          success: true,
+          order
+        });
+        
+        // Send order confirmation email
+        const { sendOrderConfirmationEmail } = await import('./email');
+        await sendOrderConfirmationEmail(order, await storage.getOrderItems(order.id), []);
+        
+        // Clear the cart
+        await storage.clearCart(sessionId);
+      }
+    } catch (error) {
+      console.error('Error during checkout:', error);
+      res.status(500).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : 'An error occurred during checkout' 
+>>>>>>> 9859d4149557cc4742a0dd4c883a94c6f8069d84
       });
     }
   });
@@ -1335,6 +1533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin order management routes
   app.get("/api/admin/orders", isAdmin, async (req, res) => {
     try {
+<<<<<<< HEAD
       console.log("Admin orders endpoint hit - fetching all orders");
       
       // Check if PostgreSQL storage is being used
@@ -1366,6 +1565,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(orders);
     } catch (error) {
       console.error("Error fetching admin orders:", error);
+=======
+      const orders = await storage.getOrders();
+      res.json(orders);
+    } catch (error) {
+>>>>>>> 9859d4149557cc4742a0dd4c883a94c6f8069d84
       res.status(500).json({ message: "Error fetching orders" });
     }
   });
@@ -1414,6 +1618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+<<<<<<< HEAD
   // Update order status
   app.put("/api/admin/orders/:id", async (req, res) => {
     try {
@@ -1783,6 +1988,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to generate mock order items", 
         error: error instanceof Error ? error.message : String(error)
       });
+=======
+  // Settings management routes
+  app.get("/api/admin/settings", isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching settings" });
+    }
+  });
+
+  app.get("/api/admin/settings/:key", isAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const setting = await storage.getSetting(key);
+      
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      
+      res.json({ key, value: setting });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching setting" });
+    }
+  });
+
+  app.put("/api/admin/settings/:key", isAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const { value, description, group } = req.body;
+      
+      if (!value) {
+        return res.status(400).json({ message: "Value is required" });
+      }
+      
+      // Check if setting exists
+      const existingSetting = await storage.getSetting(key);
+      
+      if (existingSetting) {
+        // Update existing setting
+        await storage.updateSetting(key, { value, description, group });
+      } else {
+        // Create new setting
+        await storage.createSetting({ key, value, description, group });
+      }
+      
+      res.status(200).json({ key, value });
+    } catch (error) {
+      res.status(500).json({ message: "Error updating setting" });
+>>>>>>> 9859d4149557cc4742a0dd4c883a94c6f8069d84
     }
   });
 
