@@ -318,4 +318,4 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   }),
 }));
 
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "failed";
+export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "failed"; 

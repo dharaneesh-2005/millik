@@ -64,6 +64,16 @@ export const translations = {
     expiryDate: "Expiry Date",
     cvv: "CVV",
     placeOrder: "Place Order",
+    proceedToPayment: "Proceed to Payment",
+    
+    // Order success
+    orderSuccess: "Order Success",
+    thankYou: "Thank You for Your Order!",
+    orderPlacedSuccessfully: "Your order has been placed successfully.",
+    orderNumber: "Order Number",
+    orderConfirmationEmailSent: "A confirmation email has been sent to your email address.",
+    checkSpamFolder: "If you don't see it, please check your spam folder.",
+    backToHome: "Back to Home",
     
     // Contact form
     contactUs: "Contact Us",
@@ -178,6 +188,16 @@ export const translations = {
     expiryDate: "காலாவதி தேதி",
     cvv: "CVV",
     placeOrder: "ஆர்டர் செய்",
+    proceedToPayment: "பணம் செலுத்த தொடரவும்",
+    
+    // Order success
+    orderSuccess: "ஆர்டர் வெற்றி",
+    thankYou: "உங்கள் ஆர்டருக்கு நன்றி!",
+    orderPlacedSuccessfully: "உங்கள் ஆர்டர் வெற்றிகரமாக வைக்கப்பட்டது.",
+    orderNumber: "ஆர்டர் எண்",
+    orderConfirmationEmailSent: "உங்கள் மின்னஞ்சல் முகவரிக்கு உறுதிப்படுத்தல் மின்னஞ்சல் அனுப்பப்பட்டுள்ளது.",
+    checkSpamFolder: "அதைப் பார்க்கவில்லை என்றால், உங்கள் ஸ்பேம் கோப்புறையைச் சரிபார்க்கவும்.",
+    backToHome: "முகப்புக்குத் திரும்பு",
     
     // Contact form
     contactUs: "எங்களை தொடர்பு கொள்ளுங்கள்",

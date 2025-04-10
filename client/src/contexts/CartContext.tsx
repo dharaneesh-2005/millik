@@ -76,6 +76,62 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
+      // First, get product details to check stock
+      const productResponse = await fetch(`/api/products/${productId}`);
+      if (!productResponse.ok) {
+        throw new Error(`Failed to get product details: ${productResponse.status}`);
+      }
+      
+      const product = await productResponse.json();
+      
+      // Validate quantity against stock
+      const maxQuantity = product.stockQuantity || Number.MAX_SAFE_INTEGER;
+      let safeQuantity = Math.min(quantity, maxQuantity);
+      
+      // Check if we already have this product+weight in cart to ensure total doesn't exceed stock
+      let existingCartItem = null;
+      for (const item of cartItems) {
+        if (item.productId === productId) {
+          let itemWeight = undefined;
+          try {
+            if (item.metaData) {
+              const meta = JSON.parse(item.metaData);
+              itemWeight = meta.selectedWeight;
+            }
+          } catch (error) {
+            console.error("Error parsing metadata:", error);
+          }
+          
+          const sameWeight = (itemWeight === selectedWeight) || 
+                            (!itemWeight && !selectedWeight);
+          
+          if (sameWeight) {
+            existingCartItem = item;
+            break;
+          }
+        }
+      }
+      
+      // If total quantity would exceed stock, adjust the quantity being added
+      if (existingCartItem && maxQuantity !== Number.MAX_SAFE_INTEGER) {
+        const totalQuantity = existingCartItem.quantity + safeQuantity;
+        if (totalQuantity > maxQuantity) {
+          // Only add what's allowed by stock
+          const allowedToAdd = Math.max(0, maxQuantity - existingCartItem.quantity);
+          if (allowedToAdd <= 0) {
+            toast({
+              title: "Maximum stock reached",
+              description: `You already have the maximum available quantity (${maxQuantity}) in your cart.`,
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+          // Adjust quantity
+          safeQuantity = allowedToAdd;
+        }
+      }
+      
       // Make sure we're sending the sessionId in the headers
       const savedSessionId = localStorage.getItem("cartSessionId") || sessionId;
       
@@ -90,7 +146,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({
           productId,
-          quantity,
+          quantity: safeQuantity,
           metaData: JSON.stringify(metaData)
         }),
       });
@@ -137,7 +193,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             // Update quantity of the existing item
             updatedItems[i] = {
               ...item,
-              quantity: item.quantity + quantity
+              quantity: item.quantity + safeQuantity
             };
             break;
           }
@@ -148,11 +204,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existingItem) {
         setCartItems(updatedItems);
       } else {
-        // This is a new item or the same product with a different weight option
-        // Get product details to display in cart
-        const productResponse = await fetch(`/api/products/${productId}`);
-        const product = await productResponse.json();
-        
+        // This is a new item or the same product with a different weight option        
         // If weight is selected, get the appropriate price from weight prices
         let itemPrice = product.price;
         
@@ -181,7 +233,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       toast({
         title: "Added to cart",
-        description: "Item has been added to your cart",
+        description: safeQuantity < quantity 
+          ? `Added ${safeQuantity} items to cart (limited by available stock)` 
+          : "Item has been added to your cart",
       });
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -200,6 +254,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
+      // Find the item to get its product info for stock validation
+      const item = cartItems.find(item => item.id === itemId);
+      if (!item || !item.product) {
+        throw new Error("Cart item not found");
+      }
+      
+      // Validate quantity against stock
+      const maxQuantity = item.product.stockQuantity || Number.MAX_SAFE_INTEGER;
+      let safeQuantity = Math.min(quantity, maxQuantity);
+      
       const savedSessionId = localStorage.getItem("cartSessionId") || sessionId;
       
       const response = await fetch(`/api/cart/${itemId}`, {
@@ -208,7 +272,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           "Content-Type": "application/json",
           "Session-Id": savedSessionId,
         },
-        body: JSON.stringify({ quantity }),
+        body: JSON.stringify({ quantity: safeQuantity }),
       });
       
       if (!response.ok) {
@@ -218,7 +282,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Update local state
       setCartItems(
         cartItems.map((item) =>
-          item.id === itemId ? { ...item, quantity } : item
+          item.id === itemId ? { ...item, quantity: safeQuantity } : item
         )
       );
       

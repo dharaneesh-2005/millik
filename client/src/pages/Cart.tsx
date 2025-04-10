@@ -32,14 +32,22 @@ export default function Cart() {
   const handleQuantityChange = async (itemId: number, value: string) => {
     const newQuantity = parseInt(value);
     if (!isNaN(newQuantity) && newQuantity > 0) {
+      // Find the corresponding item to get its product
+      const cartItem = cartItems.find(item => item.id === itemId);
+      if (!cartItem || !cartItem.product) return;
+      
+      // Limit quantity to available stock
+      const maxQuantity = cartItem.product.stockQuantity || Number.MAX_SAFE_INTEGER;
+      const limitedQuantity = Math.min(newQuantity, maxQuantity);
+      
       setQuantities(prev => ({
         ...prev,
-        [itemId]: newQuantity
+        [itemId]: limitedQuantity
       }));
       
       // Debounce the update to prevent excessive API calls
       try {
-        await updateCartItem(itemId, newQuantity);
+        await updateCartItem(itemId, limitedQuantity);
       } catch (error) {
         console.error("Error updating cart item:", error);
         toast({
@@ -183,11 +191,15 @@ export default function Cart() {
                                   value={quantities[item.id] || item.quantity}
                                   onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                                   min="1"
+                                  max={item.product?.stockQuantity || 999}
                                 />
                                 <button 
                                   className="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none"
                                   onClick={() => {
-                                    const newQuantity = (quantities[item.id] || item.quantity) + 1;
+                                    // Find the current stock quantity
+                                    const maxQuantity = item.product?.stockQuantity || Number.MAX_SAFE_INTEGER;
+                                    // Ensure new quantity doesn't exceed stock
+                                    const newQuantity = Math.min((quantities[item.id] || item.quantity) + 1, maxQuantity);
                                     handleQuantityChange(item.id, newQuantity.toString());
                                   }}
                                 >+</button>
