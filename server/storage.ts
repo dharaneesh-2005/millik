@@ -5,7 +5,8 @@ import {
   contacts, type Contact, type InsertContact,
   orders, type Order, type InsertOrder,
   orderItems, type OrderItem, type InsertOrderItem,
-  settings, type Setting, type InsertSetting
+  settings, type Setting, type InsertSetting,
+  OrderStatus,
 } from "@shared/schema";
 import { verifyToken } from './otpUtils';
 import { PostgreSQLStorage } from './postgresql';
@@ -29,10 +30,9 @@ export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   isAdmin(userId: number): Promise<boolean>;
-  enableOtp(userId: number, secret: string): Promise<User | undefined>;
-  verifyOtp(userId: number, token: string): Promise<boolean>;
 
   // Product operations
   getProducts(): Promise<Product[]>;
@@ -55,29 +55,35 @@ export interface IStorage {
   deleteCartItemsByProductId(productId: number): Promise<void>;
 
   // Contact operations
-  createContact(contact: InsertContact): Promise<Contact>;
   getContacts(): Promise<Contact[]>;
 
+  getContactById(id: number): Promise<Contact | undefined>;
+  createContact(contact: InsertContact): Promise<Contact>;
+
   // Order management
-  createOrder(order: InsertOrder): Promise<Order>;
-  updateOrder(id: number, order: Partial<Order>): Promise<Order>;
-  getOrderById(id: number): Promise<Order | null>;
-  getOrderByPaymentId(paymentId: string): Promise<Order | null>;
+  getOrderById(id: number): Promise<Order | undefined>;
   getOrdersBySessionId(sessionId: string): Promise<Order[]>;
   getOrdersByEmail(email: string): Promise<Order[]>;
   getOrders(): Promise<Order[]>;
   getOrdersPaginated(page: number, limit: number): Promise<{ orders: Order[], total: number }>;
+  createOrder(order: InsertOrder): Promise<Order>;
+  updateOrder(id: number, order: Partial<Order>): Promise<Order | undefined>;
   
   // Order items
-  createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   getOrderItems(orderId: number): Promise<OrderItem[]>;
+  createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   
   // Settings management
+  getSetting(key: string): Promise<Setting | null>;
+  getSettings(group?: string): Promise<Setting[]>;
   createSetting(setting: InsertSetting): Promise<Setting>;
   updateSetting(key: string, setting: Partial<Setting>): Promise<Setting>;
   deleteSetting(key: string): Promise<boolean>;
-  getSetting(key: string): Promise<Setting | null>;
-  getSettings(group?: string): Promise<Setting[]>;
+  
+  updateOrderStatus(orderId: number, status: OrderStatus): Promise<boolean>;
+  updateOrderShippingDetails(orderId: number, isShipped: boolean, trackingNumber?: string): Promise<boolean>;
+  
+  testConnection(): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -148,6 +154,12 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
     const user: User = { 
@@ -169,36 +181,6 @@ export class MemStorage implements IStorage {
     // Check if user exists and has isAdmin flag set to true
     const user = this.users.get(userId);
     return user ? Boolean(user.isAdmin) : false;
-  }
-
-  async enableOtp(userId: number, secret: string): Promise<User | undefined> {
-    const user = this.users.get(userId);
-    if (!user) return undefined;
-    
-    // Only allow enabling OTP for the admin user (userId === 1)
-    if (userId !== 1) {
-      console.error("Attempted to enable OTP for non-admin user:", userId);
-      return undefined;
-    }
-    
-    const updatedUser = { 
-      ...user, 
-      otpSecret: secret,
-      otpEnabled: true,
-      // Preserve admin status - should already be true for the predefined admin
-      isAdmin: true
-    };
-    
-    this.users.set(userId, updatedUser);
-    return updatedUser;
-  }
-  
-  async verifyOtp(userId: number, token: string): Promise<boolean> {
-    const user = this.users.get(userId);
-    if (!user || !user.otpSecret || !user.otpEnabled) return false;
-    
-    // Use the imported verifyToken function directly
-    return verifyToken(token, user.otpSecret);
   }
 
   // Product operations
@@ -391,6 +373,14 @@ export class MemStorage implements IStorage {
   }
 
   // Contact operations
+  async getContacts(): Promise<Contact[]> {
+    return Array.from(this.contacts.values());
+  }
+
+  async getContactById(id: number): Promise<Contact | undefined> {
+    return this.contacts.get(id);
+  }
+
   async createContact(insertContact: InsertContact): Promise<Contact> {
     const id = this.contactIdCounter++;
     const now = new Date();
@@ -398,9 +388,195 @@ export class MemStorage implements IStorage {
     this.contacts.set(id, contact);
     return contact;
   }
+
+  // Order management
+  async getOrderById(id: number): Promise<Order | undefined> {
+    return this.orders.get(id) || undefined;
+  }
+
+  async getOrdersBySessionId(sessionId: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(o => o.sessionId === sessionId);
+  }
+
+  async getOrdersByEmail(email: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(o => o.email === email);
+  }
+
+  async getOrders(): Promise<Order[]> {
+    return Array.from(this.orders.values());
+  }
+
+  async getOrdersPaginated(page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+    const allOrders = Array.from(this.orders.values());
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedOrders = allOrders.slice(startIndex, endIndex);
+    
+    return {
+      orders: paginatedOrders,
+      total: allOrders.length
+    };
+  }
+
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const id = this.orderIdCounter++;
+    const newOrder: Order = {
+      id,
+      email: order.email || null,
+      phone: order.phone || null,
+      status: order.status || "pending",
+      createdAt: new Date(),
+      updatedAt: null,
+      userId: order.userId || null,
+      sessionId: order.sessionId || null,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+      subtotalAmount: order.subtotalAmount,
+      taxAmount: order.taxAmount,
+      shippingAmount: order.shippingAmount,
+      discountAmount: order.discountAmount || "0",
+      paymentId: order.paymentId || null,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus || "pending",
+      transactionId: order.transactionId || null,
+      shippingAddress: order.shippingAddress,
+      billingAddress: order.billingAddress || null,
+      shippingMethod: order.shippingMethod || "standard",
+      notes: order.notes || null,
+      couponCode: order.couponCode || null
+    };
+    this.orders.set(id, newOrder);
+    return newOrder;
+  }
+
+  async updateOrder(id: number, order: Partial<Order>): Promise<Order | undefined> {
+    const existingOrder = this.orders.get(id);
+    if (!existingOrder) {
+      throw new Error(`Order with id ${id} not found`);
+    }
+    
+    const updatedOrder: Order = {
+      ...existingOrder,
+      ...order,
+      updatedAt: new Date()
+    };
+    
+    this.orders.set(id, updatedOrder);
+    return updatedOrder;
+  }
+
+  // Order items
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return Array.from(this.orderItems.values()).filter(item => item.orderId === orderId);
+  }
+
+  async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
+    const id = this.orderItemIdCounter++;
+    const newOrderItem: OrderItem = {
+      id,
+      name: orderItem.name,
+      price: orderItem.price,
+      createdAt: new Date(),
+      productId: orderItem.productId,
+      quantity: orderItem.quantity,
+      metaData: orderItem.metaData || null,
+      orderId: orderItem.orderId,
+      subtotal: orderItem.subtotal,
+      weight: orderItem.weight || null
+    };
+    this.orderItems.set(id, newOrderItem);
+    return newOrderItem;
+  }
+
+  // Settings management
+  async getSetting(key: string): Promise<Setting | null> {
+    return this.settings.get(key) || null;
+  }
+
+  async getSettings(group?: string): Promise<Setting[]> {
+    const allSettings = Array.from(this.settings.values());
+    if (group) {
+      return allSettings.filter(s => s.group === group);
+    }
+    return allSettings;
+  }
+
+  async createSetting(setting: InsertSetting): Promise<Setting> {
+    const existingSetting = await this.getSetting(setting.key);
+    if (existingSetting) {
+      throw new Error(`Setting with key ${setting.key} already exists`);
+    }
+    
+    const id = this.settingIdCounter++;
+    const newSetting: Setting = {
+      id,
+      key: setting.key,
+      value: setting.value,
+      description: setting.description || null,
+      createdAt: new Date(),
+      updatedAt: null,
+      group: setting.group || null
+    };
+    
+    this.settings.set(setting.key, newSetting);
+    return newSetting;
+  }
+
+  async updateSetting(key: string, setting: Partial<Setting>): Promise<Setting> {
+    const existingSetting = this.settings.get(key);
+    if (!existingSetting) {
+      throw new Error(`Setting with key ${key} not found`);
+    }
+    
+    const updatedSetting: Setting = {
+      ...existingSetting,
+      ...setting,
+      updatedAt: new Date()
+    };
+    
+    this.settings.set(key, updatedSetting);
+    return updatedSetting;
+  }
+
+  async deleteSetting(key: string): Promise<boolean> {
+    return this.settings.delete(key);
+  }
+
+  async updateOrderStatus(orderId: number, status: OrderStatus): Promise<boolean> {
+    const order = this.orders.get(orderId);
+    if (!order) return false;
+    
+    order.status = status;
+    order.updatedAt = new Date();
+    return true;
+  }
+
+  async updateOrderShippingDetails(
+    orderId: number, 
+    isShipped: boolean, 
+    trackingNumber?: string
+  ): Promise<boolean> {
+    const order = this.orders.get(orderId);
+    if (!order) return false;
+    
+    order.isShipped = isShipped;
+    order.updatedAt = new Date();
+    
+    if (isShipped) {
+      order.shippedAt = new Date();
+      order.status = 'shipped';
+    }
+    
+    if (trackingNumber) {
+      order.trackingNumber = trackingNumber;
+    }
+    
+    return true;
+  }
   
-  async getContacts(): Promise<Contact[]> {
-    return Array.from(this.contacts.values());
+  async testConnection(): Promise<boolean> {
+    // Memory storage is always connected
+    return true;
   }
 
   // Order management

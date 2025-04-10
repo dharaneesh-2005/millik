@@ -61,7 +61,7 @@ export default function AdminLogin() {
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "admin", // Use the predefined admin username
+      username: "admin_millikit", // Use the original admin username
       password: "",
     },
   });
@@ -84,7 +84,7 @@ export default function AdminLogin() {
     setSetupOtpInputValue("");
     setNeedsCurrentOtp(false);
     setCurrentOtpInputValue("");
-    loginForm.reset({ username: "admin", password: "" });
+    loginForm.reset({ username: "admin_millikit", password: "" });
     otpForm.reset({ token: "" });
   };
 
@@ -259,7 +259,7 @@ export default function AdminLogin() {
         // Reset forms
         setOtpInputValue("");
         setSetupOtpInputValue("");
-        loginForm.reset({ username: "admin", password: "" });
+        loginForm.reset({ username: "admin_millikit", password: "" });
         otpForm.reset({ token: "" });
       } else {
         toast({
@@ -345,12 +345,12 @@ export default function AdminLogin() {
                             <FormLabel>Username</FormLabel>
                             <FormControl>
                               <div className="relative">
-                                <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                                 <Input 
-                                  placeholder="Enter your username" 
+                                  placeholder="admin_millikit" 
                                   className="pl-10" 
+                                  disabled={isLoggingIn || showOtpForm}
                                   {...field} 
-                                  disabled
                                 />
                               </div>
                             </FormControl>
@@ -587,7 +587,7 @@ export default function AdminLogin() {
                   <Form {...loginForm}>
                     <form onSubmit={(e) => {
                       e.preventDefault();
-                      if (loginForm.getValues().username === "admin" && 
+                      if (loginForm.getValues().username === "admin_millikit" && 
                           loginForm.getValues().password === "millikit2023") {
                         setupAdminOTP();
                       } else {
@@ -759,7 +759,7 @@ export default function AdminLogin() {
                               setSetupOtpInputValue("");
                               setCurrentOtpInputValue("");
                               setNeedsCurrentOtp(false);
-                              loginForm.reset({ username: "admin", password: "" });
+                              loginForm.reset({ username: "admin_millikit", password: "" });
                               otpForm.reset({ token: "" });
                             } else {
                               toast({
