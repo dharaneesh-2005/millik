@@ -2,7 +2,10 @@ import {
   users, type User, type InsertUser,
   products, type Product, type InsertProduct,
   cartItems, type CartItem, type InsertCartItem,
-  contacts, type Contact, type InsertContact
+  contacts, type Contact, type InsertContact,
+  orders, type Order, type InsertOrder,
+  orderItems, type OrderItem, type InsertOrderItem,
+  settings, type Setting, type InsertSetting
 } from "@shared/schema";
 import { verifyToken } from './otpUtils';
 import { PostgreSQLStorage } from './postgresql';
@@ -49,10 +52,32 @@ export interface IStorage {
   updateCartItem(id: number, quantity: number): Promise<CartItem | undefined>;
   removeFromCart(id: number): Promise<void>;
   clearCart(sessionId: string): Promise<void>;
+  deleteCartItemsByProductId(productId: number): Promise<void>;
 
   // Contact operations
   createContact(contact: InsertContact): Promise<Contact>;
   getContacts(): Promise<Contact[]>;
+
+  // Order management
+  createOrder(order: InsertOrder): Promise<Order>;
+  updateOrder(id: number, order: Partial<Order>): Promise<Order>;
+  getOrderById(id: number): Promise<Order | null>;
+  getOrderByPaymentId(paymentId: string): Promise<Order | null>;
+  getOrdersBySessionId(sessionId: string): Promise<Order[]>;
+  getOrdersByEmail(email: string): Promise<Order[]>;
+  getOrders(): Promise<Order[]>;
+  getOrdersPaginated(page: number, limit: number): Promise<{ orders: Order[], total: number }>;
+  
+  // Order items
+  createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
+  getOrderItems(orderId: number): Promise<OrderItem[]>;
+  
+  // Settings management
+  createSetting(setting: InsertSetting): Promise<Setting>;
+  updateSetting(key: string, setting: Partial<Setting>): Promise<Setting>;
+  deleteSetting(key: string): Promise<boolean>;
+  getSetting(key: string): Promise<Setting | null>;
+  getSettings(group?: string): Promise<Setting[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -60,19 +85,31 @@ export class MemStorage implements IStorage {
   private products: Map<number, Product>;
   private cartItems: Map<number, CartItem>;
   private contacts: Map<number, Contact>;
+  private orders: Map<number, Order>;
+  private orderItems: Map<number, OrderItem>;
+  private settings: Map<string, Setting>;
   private userIdCounter: number;
   private productIdCounter: number;
   private cartItemIdCounter: number;
   private contactIdCounter: number;
+  private orderIdCounter: number;
+  private orderItemIdCounter: number;
+  private settingIdCounter: number;
 
   constructor() {
     this.users = new Map();
     this.products = new Map();
     this.cartItems = new Map();
     this.contacts = new Map();
+    this.orders = new Map();
+    this.orderItems = new Map();
+    this.settings = new Map();
     this.productIdCounter = 1;
     this.cartItemIdCounter = 1;
     this.contactIdCounter = 1;
+    this.orderIdCounter = 1;
+    this.orderItemIdCounter = 1;
+    this.settingIdCounter = 1;
     
     // Create a predefined admin user with ID 1
     // This is the only admin user allowed in the system
@@ -257,7 +294,18 @@ export class MemStorage implements IStorage {
   }
   
   async deleteProduct(id: number): Promise<void> {
-    this.products.delete(id);
+    try {
+      // Simulate CASCADE delete behavior - delete all cart items for this product
+      console.log(`MemStorage: Deleting product ID ${id} with simulated CASCADE behavior`);
+      await this.deleteCartItemsByProductId(id);
+      
+      // Then delete the product
+      this.products.delete(id);
+      console.log(`MemStorage: Successfully deleted product ID ${id} and its related items`);
+    } catch (error) {
+      console.error(`Error in MemStorage deleting product ${id}:`, error);
+      throw error;
+    }
   }
 
   // Cart operations
@@ -333,6 +381,15 @@ export class MemStorage implements IStorage {
       .forEach(([id, _]) => this.cartItems.delete(id));
   }
 
+  async deleteCartItemsByProductId(productId: number): Promise<void> {
+    Array.from(this.cartItems.entries())
+      .filter(([_, item]) => item.productId === productId)
+      .forEach(([id, _]) => {
+        console.log(`Deleting cart item ${id} associated with product ${productId}`);
+        this.cartItems.delete(id);
+      });
+  }
+
   // Contact operations
   async createContact(insertContact: InsertContact): Promise<Contact> {
     const id = this.contactIdCounter++;
@@ -344,6 +401,164 @@ export class MemStorage implements IStorage {
   
   async getContacts(): Promise<Contact[]> {
     return Array.from(this.contacts.values());
+  }
+
+  // Order management
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const id = this.orderIdCounter++;
+    const newOrder: Order = {
+      id,
+      email: order.email || null,
+      phone: order.phone || null,
+      status: order.status || "pending",
+      createdAt: new Date(),
+      updatedAt: null,
+      userId: order.userId || null,
+      sessionId: order.sessionId || null,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+      subtotalAmount: order.subtotalAmount,
+      taxAmount: order.taxAmount,
+      shippingAmount: order.shippingAmount,
+      discountAmount: order.discountAmount || "0",
+      paymentId: order.paymentId || null,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus || "pending",
+      transactionId: order.transactionId || null,
+      shippingAddress: order.shippingAddress,
+      billingAddress: order.billingAddress || null,
+      shippingMethod: order.shippingMethod || "standard",
+      notes: order.notes || null,
+      couponCode: order.couponCode || null
+    };
+    this.orders.set(id, newOrder);
+    return newOrder;
+  }
+  
+  async updateOrder(id: number, order: Partial<Order>): Promise<Order> {
+    const existingOrder = this.orders.get(id);
+    if (!existingOrder) {
+      throw new Error(`Order with id ${id} not found`);
+    }
+    
+    const updatedOrder: Order = {
+      ...existingOrder,
+      ...order,
+      updatedAt: new Date()
+    };
+    
+    this.orders.set(id, updatedOrder);
+    return updatedOrder;
+  }
+  
+  async getOrderById(id: number): Promise<Order | null> {
+    return this.orders.get(id) || null;
+  }
+  
+  async getOrderByPaymentId(paymentId: string): Promise<Order | null> {
+    const order = Array.from(this.orders.values()).find(o => o.paymentId === paymentId);
+    return order || null;
+  }
+  
+  async getOrdersBySessionId(sessionId: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(o => o.sessionId === sessionId);
+  }
+  
+  async getOrdersByEmail(email: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(o => o.email === email);
+  }
+  
+  async getOrders(): Promise<Order[]> {
+    return Array.from(this.orders.values());
+  }
+  
+  async getOrdersPaginated(page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+    const allOrders = Array.from(this.orders.values());
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedOrders = allOrders.slice(startIndex, endIndex);
+    
+    return {
+      orders: paginatedOrders,
+      total: allOrders.length
+    };
+  }
+  
+  // Order items
+  async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
+    const id = this.orderItemIdCounter++;
+    const newOrderItem: OrderItem = {
+      id,
+      name: orderItem.name,
+      price: orderItem.price,
+      createdAt: new Date(),
+      productId: orderItem.productId,
+      quantity: orderItem.quantity,
+      metaData: orderItem.metaData || null,
+      orderId: orderItem.orderId,
+      subtotal: orderItem.subtotal,
+      weight: orderItem.weight || null
+    };
+    this.orderItems.set(id, newOrderItem);
+    return newOrderItem;
+  }
+  
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return Array.from(this.orderItems.values()).filter(item => item.orderId === orderId);
+  }
+  
+  // Settings management
+  async createSetting(setting: InsertSetting): Promise<Setting> {
+    const existingSetting = await this.getSetting(setting.key);
+    if (existingSetting) {
+      throw new Error(`Setting with key ${setting.key} already exists`);
+    }
+    
+    const id = this.settingIdCounter++;
+    const newSetting: Setting = {
+      id,
+      key: setting.key,
+      value: setting.value,
+      description: setting.description || null,
+      createdAt: new Date(),
+      updatedAt: null,
+      group: setting.group || null
+    };
+    
+    this.settings.set(setting.key, newSetting);
+    return newSetting;
+  }
+  
+  async updateSetting(key: string, setting: Partial<Setting>): Promise<Setting> {
+    const existingSetting = this.settings.get(key);
+    if (!existingSetting) {
+      throw new Error(`Setting with key ${key} not found`);
+    }
+    
+    const updatedSetting: Setting = {
+      ...existingSetting,
+      ...setting,
+      updatedAt: new Date()
+    };
+    
+    this.settings.set(key, updatedSetting);
+    return updatedSetting;
+  }
+  
+  async deleteSetting(key: string): Promise<boolean> {
+    return this.settings.delete(key);
+  }
+  
+  async getSetting(key: string): Promise<Setting | null> {
+    return this.settings.get(key) || null;
+  }
+  
+  async getSettings(group?: string): Promise<Setting[]> {
+    const allSettings = Array.from(this.settings.values());
+    if (group) {
+      return allSettings.filter(s => s.group === group);
+    }
+    return allSettings;
   }
 
   // Initialize products

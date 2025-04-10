@@ -1,0 +1,16 @@
+{
+  "email": "test@example.com",
+  "phone": "1234567890",
+  "paymentMethod": "cod",
+  "shippingAddress": "123 Test Street",
+  "shippingCity": "Test City",
+  "shippingState": "Test State",
+  "shippingZip": "12345",
+  "shippingCountry": "India",
+  "items": [
+    {
+      "productId": 8,
+      "quantity": 2
+    }
+  ]
+} 

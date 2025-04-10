@@ -267,7 +267,16 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteProduct(id: number): Promise<void> {
     return this.executeWithRetry(async () => {
-      await this.db.delete(products).where(eq(products.id, id));
+      try {
+        // With our updated CASCADE constraint, we can directly delete the product
+        // and all related cart items will be automatically deleted
+        console.log(`PostgreSQL: Deleting product ID ${id} with CASCADE constraint handling related items`);
+        await this.db.delete(products).where(eq(products.id, id));
+        console.log(`PostgreSQL: Successfully deleted product ID ${id} and its related items`);
+      } catch (error) {
+        console.error(`Error in PostgreSQL deleting product ${id}:`, error);
+        throw error;
+      }
     });
   }
 
@@ -464,6 +473,13 @@ export class PostgreSQLStorage implements IStorage {
   async clearCart(sessionId: string): Promise<void> {
     return this.executeWithRetry(async () => {
       await this.db.delete(cartItems).where(eq(cartItems.sessionId, sessionId));
+    });
+  }
+
+  async deleteCartItemsByProductId(productId: number): Promise<void> {
+    return this.executeWithRetry(async () => {
+      console.log(`PostgreSQL: Deleting cart items for product ID ${productId}`);
+      await this.db.delete(cartItems).where(eq(cartItems.productId, productId));
     });
   }
 
