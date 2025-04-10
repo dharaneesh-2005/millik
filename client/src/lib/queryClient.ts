@@ -36,23 +36,24 @@ export async function throwIfResNotOk(res: Response): Promise<void> {
 /**
  * Helper to create fetch requests with the correct headers for API requests
  */
-export const apiRequest = async (url: string, options: RequestInit = {}) => {
-  const res = await fetch(url, {
-    ...options,
+export const apiRequest = async (method: string, url: string, data?: any) => {
+  const options: RequestInit = {
+    method,
     headers: {
-      ...options.headers,
       "Content-Type": "application/json",
     },
-  });
+  };
+  
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+  
+  const res = await fetch(url, options);
 
   await throwIfResNotOk(res);
 
-  // Return nothing for 204 No Content
-  if (res.status === 204) {
-    return;
-  }
-
-  return res.json();
+  // Return the response object (not parsed) for more flexibility
+  return res;
 };
 
 /**

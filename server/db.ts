@@ -91,16 +91,64 @@ export async function initializeDatabase(url: string) {
     await migrationDb.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        username TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        name TEXT,
-        email TEXT,
-        phone TEXT,
-        address TEXT,
-        otp_secret TEXT,
-        otp_enabled BOOLEAN DEFAULT FALSE,
-        is_admin BOOLEAN DEFAULT FALSE
+        email TEXT NOT NULL UNIQUE,
+        hashed_password TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT DEFAULT 'customer',
+        created_at TIMESTAMP DEFAULT NOW()
       );
+      
+      -- Update existing users table structure if needed
+      DO $$
+      BEGIN
+        -- Make username column nullable if it exists
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'username') THEN
+          ALTER TABLE users ALTER COLUMN username DROP NOT NULL;
+        END IF;
+        
+        -- Make password column nullable if it exists
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password') THEN
+          ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
+        END IF;
+
+        -- Check if we need to rename password column to hashed_password
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password') AND 
+           NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'hashed_password') THEN
+          -- Add hashed_password column if it doesn't exist
+          ALTER TABLE users ADD COLUMN hashed_password TEXT;
+          -- Copy values from password to hashed_password
+          UPDATE users SET hashed_password = password;
+          -- Make hashed_password NOT NULL after data is copied
+          ALTER TABLE users ALTER COLUMN hashed_password SET NOT NULL;
+          -- Optionally drop the old password column if you're sure it's safe to do so
+          -- ALTER TABLE users DROP COLUMN password;
+        END IF;
+        
+        -- If username exists but email doesn't, copy username to email
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'username') AND 
+           EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email') THEN
+          -- Update users where email is null
+          UPDATE users SET email = username WHERE email IS NULL;
+          
+          -- Also update admin users who might have non-email usernames
+          UPDATE users SET email = 'admin@millikit.com' WHERE username = 'admin_millikit' AND email IS NULL;
+        END IF;
+        
+        -- Add any missing columns
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role') THEN
+          ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'customer';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'name') THEN
+          ALTER TABLE users ADD COLUMN name TEXT;
+          UPDATE users SET name = username WHERE name IS NULL;
+          ALTER TABLE users ALTER COLUMN name SET NOT NULL;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'created_at') THEN
+          ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
+        END IF;
+      END $$;
       
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
@@ -144,6 +192,94 @@ export async function initializeDatabase(url: string) {
         message TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- Create order status enum if it doesn't exist
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
+          CREATE TYPE order_status AS ENUM ('pending', 'processing', 'shipped', 'delivered', 'cancelled', 'failed');
+        END IF;
+      END$$;
+
+      -- Create payment status enum if it doesn't exist
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+          CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+        END IF;
+      END$$;
+
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        order_number TEXT UNIQUE,
+        email TEXT,
+        phone TEXT,
+        status order_status NOT NULL DEFAULT 'pending',
+        payment_status payment_status NOT NULL DEFAULT 'pending',
+        payment_id TEXT,
+        payment_method TEXT,
+        total_amount DECIMAL(10, 2) NOT NULL,
+        subtotal_amount DECIMAL(10, 2),
+        tax_amount DECIMAL(10, 2),
+        shipping_amount DECIMAL(10, 2),
+        discount_amount DECIMAL(10, 2),
+        billing_details JSONB NOT NULL,
+        shipping_details JSONB NOT NULL,
+        shipping_address TEXT,
+        shipping_city TEXT,
+        shipping_state TEXT,
+        shipping_zip TEXT,
+        shipping_country TEXT,
+        billing_address TEXT,
+        session_id TEXT,
+        notes TEXT,
+        is_shipped BOOLEAN DEFAULT FALSE,
+        tracking_number TEXT,
+        shipped_at TIMESTAMP,
+        transaction_id TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+      
+      -- Update existing orders table to add the new fields if needed
+      DO $$
+      BEGIN
+        -- Add is_shipped column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'is_shipped') THEN
+          ALTER TABLE orders ADD COLUMN is_shipped BOOLEAN DEFAULT FALSE;
+        END IF;
+        
+        -- Add tracking_number column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'tracking_number') THEN
+          ALTER TABLE orders ADD COLUMN tracking_number TEXT;
+        END IF;
+        
+        -- Add shipped_at column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'shipped_at') THEN
+          ALTER TABLE orders ADD COLUMN shipped_at TIMESTAMP;
+        END IF;
+        
+        -- Add transaction_id column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'transaction_id') THEN
+          ALTER TABLE orders ADD COLUMN transaction_id TEXT;
+        END IF;
+      END $$;
+      
+      CREATE TABLE IF NOT EXISTS order_items (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER NOT NULL REFERENCES orders(id),
+        product_id INTEGER NOT NULL REFERENCES products(id),
+        quantity INTEGER NOT NULL,
+        price_at_purchase DECIMAL(10, 2) NOT NULL,
+        name TEXT,
+        price DECIMAL(10, 2),
+        subtotal DECIMAL(10, 2),
+        weight TEXT,
+        meta_data TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     
     // Create a client for data operations
@@ -156,8 +292,8 @@ export async function initializeDatabase(url: string) {
     if (adminUser.length === 0) {
       console.log('Creating admin user...');
       await migrationDb.execute(`
-        INSERT INTO users (username, password, name, is_admin) 
-        VALUES ('admin_millikit', 'the_millikit', 'Admin', true)
+        INSERT INTO users (username, password, email, name, role) 
+        VALUES ('admin_millikit', 'the_millikit', 'admin@millikit.com', 'Admin', 'admin')
       `);
       console.log('Admin user created successfully');
     } else {

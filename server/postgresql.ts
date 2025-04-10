@@ -2,12 +2,15 @@ import {
   users, type User, type InsertUser,
   products, type Product, type InsertProduct, type ProductReview,
   cartItems, type CartItem, type InsertCartItem,
-  contacts, type Contact, type InsertContact
+  contacts, type Contact, type InsertContact,
+  orders, type Order, type InsertOrder,
+  orderItems, type OrderItem, type InsertOrderItem,
+  settings, type Setting, type InsertSetting,
+  type OrderStatus
 } from "@shared/schema";
 import { IStorage } from "./storage";
-import { verifyToken } from './otpUtils';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { eq, like, ilike, desc, and, or, count, max, asc } from 'drizzle-orm';
+import { eq, like, ilike, desc, and, or, count, max, asc, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { PgTable } from 'drizzle-orm/pg-core';
 
@@ -143,7 +146,14 @@ export class PostgreSQLStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return this.executeWithRetry(async () => {
-      const results = await this.db.select().from(users).where(eq(users.username, username));
+      const results = await this.db.select().from(users).where(eq(users.email, username));
+      return results.length > 0 ? results[0] : undefined;
+    });
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(users).where(eq(users.email, email));
       return results.length > 0 ? results[0] : undefined;
     });
   }
@@ -158,30 +168,7 @@ export class PostgreSQLStorage implements IStorage {
   async isAdmin(userId: number): Promise<boolean> {
     return this.executeWithRetry(async () => {
       const user = await this.getUser(userId);
-      return user?.isAdmin || false;
-    });
-  }
-
-  async enableOtp(userId: number, secret: string): Promise<User | undefined> {
-    return this.executeWithRetry(async () => {
-      const updated = await this.db
-        .update(users)
-        .set({ otpSecret: secret, otpEnabled: true })
-        .where(eq(users.id, userId))
-        .returning();
-      
-      return updated.length > 0 ? updated[0] : undefined;
-    });
-  }
-
-  async verifyOtp(userId: number, token: string): Promise<boolean> {
-    return this.executeWithRetry(async () => {
-      const user = await this.getUser(userId);
-      if (!user || !user.otpEnabled || !user.otpSecret) {
-        return false;
-      }
-      
-      return verifyToken(token, user.otpSecret);
+      return user?.role === 'admin';
     });
   }
 
@@ -267,7 +254,16 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteProduct(id: number): Promise<void> {
     return this.executeWithRetry(async () => {
-      await this.db.delete(products).where(eq(products.id, id));
+      try {
+        // With our updated CASCADE constraint, we can directly delete the product
+        // and all related cart items will be automatically deleted
+        console.log(`PostgreSQL: Deleting product ID ${id} with CASCADE constraint handling related items`);
+        await this.db.delete(products).where(eq(products.id, id));
+        console.log(`PostgreSQL: Successfully deleted product ID ${id} and its related items`);
+      } catch (error) {
+        console.error(`Error in PostgreSQL deleting product ${id}:`, error);
+        throw error;
+      }
     });
   }
 
@@ -467,6 +463,13 @@ export class PostgreSQLStorage implements IStorage {
     });
   }
 
+  async deleteCartItemsByProductId(productId: number): Promise<void> {
+    return this.executeWithRetry(async () => {
+      console.log(`PostgreSQL: Deleting cart items for product ID ${productId}`);
+      await this.db.delete(cartItems).where(eq(cartItems.productId, productId));
+    });
+  }
+
   /** 
    * Contact Operations
    */
@@ -477,9 +480,316 @@ export class PostgreSQLStorage implements IStorage {
     });
   }
 
+  async getContactById(id: number): Promise<Contact | undefined> {
+    return this.executeWithRetry(async () => {
+      const result = await this.db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, id));
+      
+      return result.length > 0 ? result[0] : undefined;
+    });
+  }
+
   async getContacts(): Promise<Contact[]> {
     return this.executeWithRetry(async () => {
       return await this.db.select().from(contacts);
     });
+  }
+
+  /**
+   * Order Management Operations
+   */
+  async createOrder(order: InsertOrder): Promise<Order> {
+    return this.executeWithRetry(async () => {
+      console.log("PostgreSQL - Creating order with data:", JSON.stringify(order, null, 2));
+      
+      // Ensure required fields are present and convert types as needed
+      const orderData: any = {
+        ...order,
+        // Ensure status has a default value
+        status: order.status || 'pending',
+        // Set timestamps properly
+        createdAt: order.createdAt || new Date(),
+        // Explicitly set updatedAt to undefined instead of null to match SQL type
+        updatedAt: order.updatedAt || undefined,
+        // Ensure shipping/billing details are properly stored as strings
+        billingDetails: typeof order.billingDetails === 'string' 
+          ? order.billingDetails 
+          : JSON.stringify(order.billingDetails || { address: order.shippingAddress }),
+        shippingDetails: typeof order.shippingDetails === 'string'
+          ? order.shippingDetails
+          : JSON.stringify(order.shippingDetails || { address: order.shippingAddress }),
+        // Ensure payment fields have defaults
+        paymentStatus: order.paymentStatus || 'pending',
+        paymentId: order.paymentId || undefined,
+        // Only include fields that are in the schema
+        isShipped: order.isShipped || false,
+        trackingNumber: order.trackingNumber || undefined,
+        shippedAt: order.shippedAt || undefined,
+        notes: order.notes || undefined,
+      };
+      
+      // Remove transactionId if it exists to avoid database errors
+      if ('transactionId' in orderData) {
+        console.log("PostgreSQL - Removing transactionId field to avoid database errors");
+        delete orderData.transactionId;
+      }
+      
+      console.log("PostgreSQL - Normalized order data:", JSON.stringify(orderData, null, 2));
+      
+      try {
+        const newOrder = await this.db.insert(orders).values(orderData).returning();
+        console.log("PostgreSQL - Order created successfully:", JSON.stringify(newOrder[0], null, 2));
+        return newOrder[0];
+      } catch (error) {
+        console.error("PostgreSQL - Error creating order:", error);
+        throw error;
+      }
+    });
+  }
+  
+  async updateOrder(id: number, orderUpdate: Partial<Order>): Promise<Order> {
+    return this.executeWithRetry(async () => {
+      const updated = await this.db
+        .update(orders)
+        .set(orderUpdate)
+        .where(eq(orders.id, id))
+        .returning();
+      
+      if (updated.length === 0) {
+        throw new Error(`Order with id ${id} not found`);
+      }
+      
+      return updated[0];
+    });
+  }
+  
+  async getOrderById(id: number): Promise<Order | undefined> {
+    return this.executeWithRetry(async () => {
+      const result = await this.db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+      
+      return result.length > 0 ? result[0] : undefined;
+    });
+  }
+  
+  async getOrderByPaymentId(paymentId: string): Promise<Order | undefined> {
+    return this.executeWithRetry(async () => {
+      const result = await this.db
+        .select()
+        .from(orders)
+        .where(eq(orders.paymentId, paymentId));
+      
+      return result.length > 0 ? result[0] : undefined;
+    });
+  }
+  
+  async getOrdersBySessionId(sessionId: string): Promise<Order[]> {
+    return this.executeWithRetry(async () => {
+      return await this.db
+        .select()
+        .from(orders)
+        .where(eq(orders.sessionId, sessionId));
+    });
+  }
+  
+  async getOrdersByEmail(email: string): Promise<Order[]> {
+    return this.executeWithRetry(async () => {
+      return await this.db
+        .select()
+        .from(orders)
+        .where(eq(orders.email, email));
+    });
+  }
+  
+  async getOrders(): Promise<Order[]> {
+    return this.executeWithRetry(async () => {
+      try {
+        // Use simple select instead of the problematic query.orders.findMany
+        const result = await this.db
+          .select()
+          .from(orders)
+          .orderBy(desc(orders.createdAt));
+        
+        console.log(`Found ${result.length} orders`);
+        return result;
+      } catch (e) {
+        console.error('Error getting orders:', e);
+        return [];
+      }
+    });
+  }
+  
+  async getOrdersPaginated(page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+    return this.executeWithRetry(async () => {
+      const offset = (page - 1) * limit;
+      
+      const [allOrders, countResult] = await Promise.all([
+        this.db
+          .select()
+          .from(orders)
+          .orderBy(desc(orders.createdAt))
+          .limit(limit)
+          .offset(offset),
+        this.db
+          .select({ count: sql`count(*)` })
+          .from(orders)
+      ]);
+      
+      const total = parseInt(countResult[0].count as unknown as string);
+      
+      return {
+        orders: allOrders,
+        total
+      };
+    });
+  }
+  
+  /**
+   * Order Items Operations
+   */
+  async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
+    return this.executeWithRetry(async () => {
+      const newOrderItem = await this.db.insert(orderItems).values(orderItem).returning();
+      return newOrderItem[0];
+    });
+  }
+  
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return this.executeWithRetry(async () => {
+      return await this.db
+        .select()
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderId));
+    });
+  }
+  
+  /**
+   * Settings Operations
+   */
+  async createSetting(setting: InsertSetting): Promise<Setting> {
+    return this.executeWithRetry(async () => {
+      // Check if setting already exists
+      const existing = await this.getSetting(setting.key);
+      if (existing) {
+        throw new Error(`Setting with key ${setting.key} already exists`);
+      }
+      
+      const newSetting = await this.db.insert(settings).values(setting).returning();
+      return newSetting[0];
+    });
+  }
+  
+  async updateSetting(key: string, settingUpdate: Partial<Setting>): Promise<Setting> {
+    return this.executeWithRetry(async () => {
+      const updated = await this.db
+        .update(settings)
+        .set({
+          ...settingUpdate,
+          updatedAt: new Date()
+        })
+        .where(eq(settings.key, key))
+        .returning();
+      
+      if (updated.length === 0) {
+        throw new Error(`Setting with key ${key} not found`);
+      }
+      
+      return updated[0];
+    });
+  }
+  
+  async deleteSetting(key: string): Promise<boolean> {
+    return this.executeWithRetry(async () => {
+      const result = await this.db
+        .delete(settings)
+        .where(eq(settings.key, key));
+      
+      return result.count > 0;
+    });
+  }
+  
+  async getSetting(key: string): Promise<Setting | null> {
+    return this.executeWithRetry(async () => {
+      const result = await this.db
+        .select()
+        .from(settings)
+        .where(eq(settings.key, key));
+      
+      return result.length > 0 ? result[0] : null;
+    });
+  }
+  
+  async getSettings(group?: string): Promise<Setting[]> {
+    return this.executeWithRetry(async () => {
+      if (group) {
+        return await this.db
+          .select()
+          .from(settings)
+          .where(eq(settings.group, group));
+      }
+      
+      return await this.db.select().from(settings);
+    });
+  }
+
+  async updateOrderStatus(orderId: number, status: OrderStatus) {
+    try {
+      await this.db
+        .update(orders)
+        .set({
+          status,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, orderId));
+      return true;
+    } catch (e) {
+      console.error('Error updating order status', e);
+      return false;
+    }
+  }
+
+  async updateOrderShippingDetails(
+    orderId: number, 
+    isShipped: boolean, 
+    trackingNumber?: string
+  ) {
+    try {
+      const updateData: Partial<typeof orders.$inferInsert> = {
+        isShipped,
+        updatedAt: new Date(),
+      };
+      
+      if (isShipped) {
+        updateData.shippedAt = new Date();
+        updateData.status = 'shipped';
+      }
+      
+      if (trackingNumber) {
+        updateData.trackingNumber = trackingNumber;
+      }
+      
+      await this.db
+        .update(orders)
+        .set(updateData)
+        .where(eq(orders.id, orderId));
+      return true;
+    } catch (e) {
+      console.error('Error updating order shipping details', e);
+      return false;
+    }
+  }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.db.execute('SELECT 1');
+      return true;
+    } catch (error) {
+      console.error('Database connection test failed', error);
+      return false;
+    }
   }
 }

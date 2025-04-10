@@ -183,7 +183,6 @@ export const orders = pgTable("orders", {
   isShipped: boolean("is_shipped").default(false),
   trackingNumber: text("tracking_number"),
   shippedAt: timestamp("shipped_at"),
-  transactionId: text("transaction_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -319,4 +318,4 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   }),
 }));
 
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "failed";
+export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "failed"; 

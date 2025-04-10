@@ -11,16 +11,16 @@ export function calculateCartSummary(cartItems: (CartItem & { product?: Product 
   
   // Calculate subtotal
   const subtotal = cartItems.reduce((total, item) => {
-    // Use displayPrice (set for weight-specific pricing) if available, otherwise use default price
-    const price = parseFloat(item.product?.displayPrice || item.product?.price || "0");
+    // Get the price from the product if available
+    const price = parseFloat(item.product?.price || "0");
     return total + (price * (item.quantity || 0));
   }, 0);
   
-  // Calculate shipping (free shipping over ₹1000, otherwise ₹100)
-  const shipping = subtotal > 1000 ? 0 : 100;
+  // For testing purposes: set shipping to 0 (normally: free shipping over ₹1000, otherwise ₹100)
+  const shipping = 0;
   
-  // Calculate tax (5% GST)
-  const tax = subtotal * 0.05;
+  // For testing purposes: set tax to 0 (normally: 5% GST)
+  const tax = 0;
   
   // Calculate total
   const total = subtotal + shipping + tax;
