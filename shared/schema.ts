@@ -40,27 +40,21 @@ export const userRoleEnum = pgEnum("user_role", [
   "customer"
 ]);
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  name: text("name"),
-  email: text("email"),
-  phone: text("phone"),
-  address: text("address"),
-  otpSecret: text("otp_secret"),
-  otpEnabled: boolean("otp_enabled").default(false),
-  isAdmin: boolean("is_admin").default(false),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    email: text("email").unique().notNull(),
+    hashedPassword: text("hashed_password").notNull(),
+    name: text("name").notNull(),
+    role: userRoleEnum("role").default("customer").notNull(),
+    username: text("username").unique(),
+    password: text("password"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  }
+);
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  name: true,
-  email: true,
-  phone: true,
-  address: true,
-});
+export const insertUserSchema = createInsertSchema(users);
 
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -154,39 +148,6 @@ export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 
-// Orders table
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  sessionId: text("session_id"),
-  orderNumber: text("order_number").unique(),
-  email: text("email"),
-  phone: text("phone"),
-  status: orderStatusEnum("status").default("pending").notNull(),
-  paymentStatus: paymentStatusEnum("payment_status").default("pending").notNull(),
-  paymentId: text("payment_id"),
-  paymentMethod: text("payment_method"),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  subtotalAmount: decimal("subtotal_amount", { precision: 10, scale: 2 }),
-  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }),
-  shippingAmount: decimal("shipping_amount", { precision: 10, scale: 2 }),
-  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
-  billingDetails: jsonb("billing_details").notNull(),
-  shippingDetails: jsonb("shipping_details").notNull(),
-  shippingAddress: text("shipping_address"),
-  shippingCity: text("shipping_city"),
-  shippingState: text("shipping_state"),
-  shippingZip: text("shipping_zip"),
-  shippingCountry: text("shipping_country"),
-  billingAddress: text("billing_address"),
-  notes: text("notes"),
-  isShipped: boolean("is_shipped").default(false),
-  trackingNumber: text("tracking_number"),
-  shippedAt: timestamp("shipped_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 export const insertOrderSchema = createInsertSchema(orders, {
   billingDetails: z.record(z.string(), z.any()),
   shippingDetails: z.record(z.string(), z.any()),
@@ -243,15 +204,51 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).partial({
 });
 
 // Settings Schema
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  sessionId: text("session_id"),
+  orderNumber: text("order_number").notNull().unique(),
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed, cancelled
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  subtotalAmount: decimal("subtotal_amount", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
+  shippingAmount: decimal("shipping_amount", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  paymentMethod: text("payment_method").notNull(),
+  paymentId: text("payment_id"),
+  paymentStatus: text("payment_status").notNull().default("pending"), // pending, completed, failed
+  email: text("email"),
+  phone: text("phone"),
+  shippingAddress: text("shipping_address").notNull(),
+  shippingCity: text("shipping_city").notNull(),
+  shippingState: text("shipping_state").notNull(),
+  shippingZip: text("shipping_zip").notNull(),
+  shippingCountry: text("shipping_country").notNull().default("India"),
+  items: text("items").notNull(), // JSON string of ordered items
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id, { onDelete: 'cascade' }).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  name: text("name").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  weight: text("weight"),
+  metaData: text("meta_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   key: text("key").notNull().unique(),
   value: text("value").notNull(),
   description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
-  group: text("group"),
-});
 
 export const insertSettingSchema = createInsertSchema(settings).omit({
   id: true,
@@ -268,54 +265,5 @@ export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type Setting = typeof settings.$inferSelect;
 export type InsertSetting = z.infer<typeof insertSettingSchema>;
 
-// Payment method type
-export const PaymentMethodEnum = z.enum([
-  "razorpay",
-  "cod",
-  "bank_transfer"
-]);
 
 export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
-
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  orders: many(orders),
-  cartItems: many(cartItems),
-}));
-
-export const productsRelations = relations(products, ({ many }) => ({
-  cartItems: many(cartItems),
-  orderItems: many(orderItems),
-}));
-
-export const ordersRelations = relations(orders, ({ one, many }) => ({
-  user: one(users, {
-    fields: [orders.userId],
-    references: [users.id],
-  }),
-  orderItems: many(orderItems),
-}));
-
-export const orderItemsRelations = relations(orderItems, ({ one }) => ({
-  order: one(orders, {
-    fields: [orderItems.orderId],
-    references: [orders.id],
-  }),
-  product: one(products, {
-    fields: [orderItems.productId],
-    references: [products.id],
-  }),
-}));
-
-export const cartItemsRelations = relations(cartItems, ({ one }) => ({
-  user: one(users, {
-    fields: [cartItems.userId],
-    references: [users.id],
-  }),
-  product: one(products, {
-    fields: [cartItems.productId],
-    references: [products.id],
-  }),
-}));
-
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "failed";
