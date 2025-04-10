@@ -61,7 +61,6 @@ export interface IStorage {
 
   // Order management
   getOrderById(id: number): Promise<Order | undefined>;
-  getOrderByPaymentId(paymentId: string): Promise<Order | undefined>;
   getOrdersBySessionId(sessionId: string): Promise<Order[]>;
   getOrdersByEmail(email: string): Promise<Order[]>;
   getOrders(): Promise<Order[]>;
@@ -392,10 +391,6 @@ export class MemStorage implements IStorage {
   // Order management
   async getOrderById(id: number): Promise<Order | undefined> {
     return this.orders.get(id) || undefined;
-  }
-
-  async getOrderByPaymentId(paymentId: string): Promise<Order | undefined> {
-    return Array.from(this.orders.values()).find(o => o.paymentId === paymentId);
   }
 
   async getOrdersBySessionId(sessionId: string): Promise<Order[]> {
