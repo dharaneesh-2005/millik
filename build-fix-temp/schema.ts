@@ -40,27 +40,21 @@ export const userRoleEnum = pgEnum("user_role", [
   "customer"
 ]);
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  name: text("name"),
-  email: text("email"),
-  phone: text("phone"),
-  address: text("address"),
-  otpSecret: text("otp_secret"),
-  otpEnabled: boolean("otp_enabled").default(false),
-  isAdmin: boolean("is_admin").default(false),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    email: text("email").unique().notNull(),
+    hashedPassword: text("hashed_password").notNull(),
+    name: text("name").notNull(),
+    role: userRoleEnum("role").default("customer").notNull(),
+    username: text("username").unique(),
+    password: text("password"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  }
+);
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  name: true,
-  email: true,
-  phone: true,
-  address: true,
-});
+export const insertUserSchema = createInsertSchema(users);
 
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -157,34 +151,33 @@ export type InsertContact = z.infer<typeof insertContactSchema>;
 // Orders table
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  sessionId: text("session_id"),
-  orderNumber: text("order_number").unique(),
-  email: text("email"),
-  phone: text("phone"),
-  status: orderStatusEnum("status").default("pending").notNull(),
-  paymentStatus: paymentStatusEnum("payment_status").default("pending").notNull(),
-  paymentId: text("payment_id"),
-  paymentMethod: text("payment_method"),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  subtotalAmount: decimal("subtotal_amount", { precision: 10, scale: 2 }),
-  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }),
-  shippingAmount: decimal("shipping_amount", { precision: 10, scale: 2 }),
-  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
-  billingDetails: jsonb("billing_details").notNull(),
-  shippingDetails: jsonb("shipping_details").notNull(),
-  shippingAddress: text("shipping_address"),
-  shippingCity: text("shipping_city"),
-  shippingState: text("shipping_state"),
-  shippingZip: text("shipping_zip"),
-  shippingCountry: text("shipping_country"),
-  billingAddress: text("billing_address"),
-  notes: text("notes"),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }).notNull().default(1),
+  sessionId: varchar("session_id", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 255 }),
+  status: varchar("status", { length: 255 }).notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  orderNumber: varchar("order_number", { length: 255 }),
+  totalAmount: varchar("total_amount", { length: 255 }).notNull(),
+  subtotalAmount: varchar("subtotal_amount", { length: 255 }),
+  taxAmount: varchar("tax_amount", { length: 255 }),
+  shippingAmount: varchar("shipping_amount", { length: 255 }),
+  discountAmount: varchar("discount_amount", { length: 255 }),
+  paymentId: varchar("payment_id", { length: 255 }),
+  paymentMethod: varchar("payment_method", { length: 255 }),
+  paymentStatus: varchar("payment_status", { length: 255 }),
+  transactionId: varchar("transaction_id", { length: 255 }),
+  shippingAddress: varchar("shipping_address", { length: 1000 }),
+  billingAddress: varchar("billing_address", { length: 1000 }),
+  billingDetails: jsonb("billing_details"),
+  shippingDetails: jsonb("shipping_details"),
+  shippingMethod: varchar("shipping_method", { length: 255 }),
+  notes: varchar("notes", { length: 1000 }),
+  couponCode: varchar("coupon_code", { length: 255 }),
   isShipped: boolean("is_shipped").default(false),
-  trackingNumber: text("tracking_number"),
+  trackingNumber: varchar("tracking_number", { length: 255 }),
   shippedAt: timestamp("shipped_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertOrderSchema = createInsertSchema(orders, {
@@ -318,4 +311,4 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   }),
 }));
 
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "failed";
+export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "failed"; 
