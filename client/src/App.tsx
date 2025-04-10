@@ -8,6 +8,7 @@ import ProductDetail from "@/pages/ProductDetail";
 import Contact from "@/pages/Contact";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
+import OrderSuccess from "@/pages/OrderSuccess";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import ProductForm from "@/pages/admin/ProductForm";
 // Using simplified Admin Login without Google Authenticator
@@ -58,8 +59,9 @@ function App() {
                 <ProductForm />
               </AdminProtectedRoute>
 
-              {/* Public Checkout Route - no protection */}
+              {/* Public Checkout Routes - no protection */}
               <Route path="/checkout" component={Checkout} />
+              <Route path="/order-success" component={OrderSuccess} />
               
               {/* Public Routes - must be last to allow other routes to match first */}
               <Route component={PublicRoutes} />
