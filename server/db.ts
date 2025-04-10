@@ -237,7 +237,6 @@ export async function initializeDatabase(url: string) {
         is_shipped BOOLEAN DEFAULT FALSE,
         tracking_number TEXT,
         shipped_at TIMESTAMP,
-        transaction_id TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
@@ -258,11 +257,6 @@ export async function initializeDatabase(url: string) {
         -- Add shipped_at column if it doesn't exist
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'shipped_at') THEN
           ALTER TABLE orders ADD COLUMN shipped_at TIMESTAMP;
-        END IF;
-        
-        -- Add transaction_id column if it doesn't exist
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'transaction_id') THEN
-          ALTER TABLE orders ADD COLUMN transaction_id TEXT;
         END IF;
       END $$;
       

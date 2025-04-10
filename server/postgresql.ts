@@ -530,12 +530,6 @@ export class PostgreSQLStorage implements IStorage {
         notes: order.notes || undefined,
       };
       
-      // Remove transactionId if it exists to avoid database errors
-      if ('transactionId' in orderData) {
-        console.log("PostgreSQL - Removing transactionId field to avoid database errors");
-        delete orderData.transactionId;
-      }
-      
       console.log("PostgreSQL - Normalized order data:", JSON.stringify(orderData, null, 2));
       
       try {
