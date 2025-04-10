@@ -49,6 +49,7 @@ export interface IStorage {
   updateCartItem(id: number, quantity: number): Promise<CartItem | undefined>;
   removeFromCart(id: number): Promise<void>;
   clearCart(sessionId: string): Promise<void>;
+  deleteCartItemsByProductId(productId: number): Promise<void>;
 
   // Contact operations
   createContact(contact: InsertContact): Promise<Contact>;
@@ -257,7 +258,18 @@ export class MemStorage implements IStorage {
   }
   
   async deleteProduct(id: number): Promise<void> {
-    this.products.delete(id);
+    try {
+      // Simulate CASCADE delete behavior - delete all cart items for this product
+      console.log(`MemStorage: Deleting product ID ${id} with simulated CASCADE behavior`);
+      await this.deleteCartItemsByProductId(id);
+      
+      // Then delete the product
+      this.products.delete(id);
+      console.log(`MemStorage: Successfully deleted product ID ${id} and its related items`);
+    } catch (error) {
+      console.error(`Error in MemStorage deleting product ${id}:`, error);
+      throw error;
+    }
   }
 
   // Cart operations
@@ -331,6 +343,15 @@ export class MemStorage implements IStorage {
     Array.from(this.cartItems.entries())
       .filter(([_, item]) => item.sessionId === sessionId)
       .forEach(([id, _]) => this.cartItems.delete(id));
+  }
+
+  async deleteCartItemsByProductId(productId: number): Promise<void> {
+    Array.from(this.cartItems.entries())
+      .filter(([_, item]) => item.productId === productId)
+      .forEach(([id, _]) => {
+        console.log(`Deleting cart item ${id} associated with product ${productId}`);
+        this.cartItems.delete(id);
+      });
   }
 
   // Contact operations

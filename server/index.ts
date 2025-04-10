@@ -87,12 +87,8 @@ app.use((req, res, next) => {
   }
 
   // Configure server for both local development and Vercel deployment
-  const port = process.env.PORT || 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  const port = process.env.PORT || 3000;
+  server.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();

@@ -95,6 +95,7 @@ interface ReviewItem {
   rating: number;
   comment: string;
   helpfulCount: number;
+  sessionId?: string; // Add session ID to track who wrote the review
 }
 
 export default function ProductForm() {
