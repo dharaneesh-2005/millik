@@ -168,7 +168,7 @@ export class PostgreSQLStorage implements IStorage {
   async isAdmin(userId: number): Promise<boolean> {
     return this.executeWithRetry(async () => {
       const user = await this.getUser(userId);
-      return user?.role === 'admin';
+      return Boolean(user?.isAdmin);
     });
   }
 
