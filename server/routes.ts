@@ -1602,14 +1602,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Order not found" });
       }
       
-      await storage.updateOrder(id, req.body);
+      // Check if we're updating status to "completed" and have a tracking ID
+      if (req.body.status === "completed" && req.body.trackingId) {
+        console.log(`Order ${id} is being marked as completed with tracking ID: ${req.body.trackingId}`);
+        
+        // Update order with tracking ID and status
+        await storage.updateOrder(id, {
+          status: "completed",
+          trackingId: req.body.trackingId
+        });
+        
+        // Send shipping notification email with tracking ID
+        try {
+          // Get latest order data after update
+          const updatedOrder = await storage.getOrderById(id);
+          if (updatedOrder && updatedOrder.email) {
+            const emailResult = await sendShippingNotificationEmail(
+              updatedOrder, 
+              updatedOrder.trackingId || req.body.trackingId
+            );
+            console.log(`✅ Shipping notification email sent to ${updatedOrder.email}`);
+            console.log(`Email result:`, emailResult);
+          }
+        } catch (emailError) {
+          console.error(`Error sending shipping notification email:`, emailError);
+          // Don't fail the entire operation if just the email fails
+        }
+      } else {
+        // Normal update without email notification
+        await storage.updateOrder(id, req.body);
+      }
       
       // Get updated order
       const updatedOrder = await storage.getOrderById(id);
       
       res.json(updatedOrder);
     } catch (error) {
+      console.error(`Error updating order:`, error);
       res.status(500).json({ message: "Error updating order" });
+    }
+  });
+  
+  // Delete an order
+  app.delete("/api/admin/orders/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      
+      const order = await storage.getOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      const success = await storage.deleteOrder(id);
+      
+      if (success) {
+        res.status(200).json({ success: true, message: "Order deleted successfully" });
+      } else {
+        res.status(500).json({ success: false, message: "Failed to delete order" });
+      }
+    } catch (error) {
+      console.error(`Error deleting order:`, error);
+      res.status(500).json({ message: "Error deleting order" });
     }
   });
 

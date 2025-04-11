@@ -799,4 +799,38 @@ export class PostgreSQLStorage implements IStorage {
       return await this.db.select().from(settings);
     });
   }
+
+  /**
+   * Delete an order and its associated order items
+   */
+  async deleteOrder(id: number): Promise<boolean> {
+    try {
+      console.log(`PostgreSQL: Attempting to delete order with ID ${id}`);
+      
+      // First, delete all order items associated with this order
+      const deleteItemsResult = await this.executeWithRetry(async () => {
+        const result = await this.db
+          .delete(orderItems)
+          .where(eq(orderItems.orderId, id));
+        
+        console.log(`PostgreSQL: Deleted ${result.count} order items for order ${id}`);
+        return result;
+      });
+
+      // Then, delete the order itself
+      const deleteOrderResult = await this.executeWithRetry(async () => {
+        const result = await this.db
+          .delete(orders)
+          .where(eq(orders.id, id));
+        
+        console.log(`PostgreSQL: Order deletion result for ID ${id}: ${result.count} row(s) affected`);
+        return result;
+      });
+
+      return deleteOrderResult.count > 0;
+    } catch (error) {
+      console.error(`PostgreSQL: Error deleting order ${id}:`, error);
+      return false;
+    }
+  }
 }
