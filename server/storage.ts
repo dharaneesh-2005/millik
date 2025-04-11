@@ -536,8 +536,40 @@ export class MemStorage implements IStorage {
   async deleteSetting(key: string): Promise<boolean> {
     return this.settings.delete(key);
   }
+  
+  /**
+   * Delete an order and its associated order items
+   */
+  async deleteOrder(id: number): Promise<boolean> {
+    try {
+      console.log(`MemStorage: Attempting to delete order with ID ${id}`);
+      if (!this.orders.has(id)) {
+        console.log(`MemStorage: Order ID ${id} not found`);
+        return false;
+      }
+      
+      // First, remove all order items associated with this order
+      const deletedItems = Array.from(this.orderItems.entries())
+        .filter(([_, item]) => item.orderId === id)
+        .map(([itemId, _]) => {
+          console.log(`MemStorage: Deleting order item ${itemId} for order ${id}`);
+          return this.orderItems.delete(itemId);
+        });
+      
+      console.log(`MemStorage: Deleted ${deletedItems.length} order items for order ${id}`);
+      
+      // Then, delete the order itself
+      const result = this.orders.delete(id);
+      console.log(`MemStorage: Order deletion result for ID ${id}: ${result}`);
+      
+      return result;
+    } catch (error) {
+      console.error(`MemStorage: Error deleting order ${id}:`, error);
+      return false;
+    }
+  }
 
-  async updateOrderStatus(orderId: number, status: OrderStatus): Promise<boolean> {
+  async updateOrderStatus(orderId: number, status: string): Promise<boolean> {
     const order = this.orders.get(orderId);
     if (!order) return false;
     
@@ -548,22 +580,16 @@ export class MemStorage implements IStorage {
 
   async updateOrderShippingDetails(
     orderId: number, 
-    isShipped: boolean, 
-    trackingNumber?: string
+    trackingId?: string
   ): Promise<boolean> {
     const order = this.orders.get(orderId);
     if (!order) return false;
     
-    order.isShipped = isShipped;
     order.updatedAt = new Date();
+    order.status = 'completed';
     
-    if (isShipped) {
-      order.shippedAt = new Date();
-      order.status = 'shipped';
-    }
-    
-    if (trackingNumber) {
-      order.trackingNumber = trackingNumber;
+    if (trackingId) {
+      order.trackingId = trackingId;
     }
     
     return true;

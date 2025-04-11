@@ -8,6 +8,7 @@ import { generateSecret, generateQrCode, verifyToken } from "./otpUtils";
 import { setupAuth } from "./auth";
 import { createRazorpayOrder, verifyPaymentSignature, generateOrderNumber, generateTransactionId } from './razorpay';
 import { sql } from 'drizzle-orm';
+import { sendShippingNotificationEmail } from "./email";
 
 // Session storage for admin authentication
 interface AdminSession {

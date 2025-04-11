@@ -48,7 +48,7 @@ const transporter = nodemailer.createTransport({
 export const sendShippingNotificationEmail = async (
   order: Order,
   trackingId: string
-): Promise<{ success: boolean; error?: string }> {
+) => {
   try {
     const { email, orderNumber } = order;
 
