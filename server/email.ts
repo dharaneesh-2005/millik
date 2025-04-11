@@ -269,7 +269,7 @@ export const sendOrderConfirmationEmail = async (order: Order, orderItems: Order
             </div>
           </div>
           
-          <p style="color: #4B5563; text-align: center;">Visit our website at <a href="${millik-1.onrender.com}" style="color: #059669; text-decoration: none; font-weight: 500;">${millik-1.onrender.com}</a> to track your order status.</p>
+          <p style="color: #4B5563; text-align: center;">Visit our website at <a href="${BASE_URL}" style="color: #059669; text-decoration: none; font-weight: 500;">${BASE_URL}</a> to track your order status.</p>
         </div>
         
         <!-- Footer -->
