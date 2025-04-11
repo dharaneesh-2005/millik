@@ -49,6 +49,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { 
   Pencil, 
@@ -106,6 +110,67 @@ const formatPhoneNumber = (phoneNumber: string) => {
   return cleaned.length > 5 ? `+91 ${cleaned}` : phoneNumber;
 };
 
+// Function to get status badge variant based on order status
+const getOrderStatusBadge = (status: string): "default" | "destructive" | "secondary" | "outline" => {
+  switch (status) {
+    case 'delivered':
+      return "default";
+    case 'processing':
+      return "default";
+    case 'pending':
+      return "secondary";
+    case 'cancelled':
+      return "destructive";
+    case 'failed':
+      return "destructive";
+    default:
+      return "outline";
+  }
+};
+
+// Function to get payment status badge variant
+const getPaymentStatusBadge = (status: string): "default" | "destructive" | "secondary" | "outline" => {
+  switch (status) {
+    case 'completed':
+      return "default"; // Use default (green) for completed
+    case 'pending':
+      return "secondary"; // Use secondary for pending
+    case 'failed':
+      return "destructive";
+    default:
+      return "outline";
+  }
+};
+
+// Format date helper
+const formatDate = (dateString: Date | string | null) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Add a safe formatPrice wrapper
+const safeFormatPrice = (price: string | number | null | undefined): string => {
+  if (price === null || price === undefined) return '0';
+  return formatPrice(price as string | number);
+};
+
+// Helper function to safely get boolean values
+const safeGetBoolean = (value: boolean | null | undefined): boolean => {
+  return value === true;
+};
+
+// Helper function to safely get string values
+const safeGetString = (value: string | null | undefined): string => {
+  return value || '';
+};
+
 export default function AdminDashboard() {
   const { toast } = useToast();
   // Add a reference to track if initial data has been loaded
@@ -119,7 +184,10 @@ export default function AdminDashboard() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
   const [featuredFilter, setFeaturedFilter] = useState<string>("all");
@@ -1035,9 +1103,9 @@ export default function AdminDashboard() {
         </div>
         
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.5 }}
         >
           <Tabs defaultValue={activeTab} onValueChange={handleTabChange}>
             <TabsList className="grid grid-cols-4 w-full max-w-md mb-8">
@@ -1056,6 +1124,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="stats" className="flex items-center">
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Stats</span>
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="flex items-center">
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Orders</span>
               </TabsTrigger>
             </TabsList>
             
@@ -1278,10 +1350,10 @@ export default function AdminDashboard() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="space-y-1">
-                                      <div className="font-medium">₹{formatPrice(product.price)}</div>
+                                      <div className="font-medium">₹{safeFormatPrice(product.price)}</div>
                                       {product.comparePrice && (
                                         <div className="text-sm line-through text-muted-foreground">
-                                          ₹{formatPrice(product.comparePrice)}
+                                          ₹{safeFormatPrice(product.comparePrice)}
                                         </div>
                                       )}
                                     </div>
@@ -1354,7 +1426,6 @@ export default function AdminDashboard() {
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuItem asChild>
                                           <Link href={`/admin/products/${product.id}`}>
                                             <Pencil className="mr-2 h-4 w-4" />
@@ -2056,6 +2127,250 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="orders">
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between">
+                      <CardTitle>Orders Management</CardTitle>
+                      <div className="flex gap-2">
+                        <div className="w-64">
+                          <Input 
+                            type="text" 
+                            placeholder="Search by order number, email or phone" 
+                            value={orderSearchQuery}
+                            onChange={(e) => setOrderSearchQuery(e.target.value)}
+                          />
+                        </div>
+                        <Select 
+                          value={orderStatusFilter} 
+                          onValueChange={setOrderStatusFilter}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Filter by status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="processing">Processing</SelectItem>
+                            <SelectItem value="shipped">Shipped</SelectItem>
+                            <SelectItem value="delivered">Delivered</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          onClick={() => {
+                            fetchOrders();
+                            toast({
+                              title: "Refreshing orders",
+                              description: "Getting the latest orders data",
+                            });
+                          }}
+                          variant="outline"
+                          size="icon"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {ordersLoading ? (
+                      <div className="flex justify-center items-center h-64">
+                        <Loader className="h-8 w-8 animate-spin" />
+                      </div>
+                    ) : orders.length === 0 ? (
+                      <div className="text-center p-8">
+                        <h3 className="text-lg font-medium mb-2">No orders found</h3>
+                        <p className="text-muted-foreground mb-4">
+                          There are no orders in the system yet.
+                        </p>
+                        <Button onClick={fetchOrders} variant="outline">
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Refresh orders
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[120px]">Order Number</TableHead>
+                              <TableHead>Customer</TableHead>
+                              <TableHead className="w-[140px]">Contact Info</TableHead>
+                              <TableHead className="w-[150px]">Amount</TableHead>
+                              <TableHead className="w-[120px]">Status</TableHead>
+                              <TableHead className="w-[140px]">Payment</TableHead>
+                              <TableHead className="w-[150px]">Date</TableHead>
+                              <TableHead className="text-right w-[100px]">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredOrders.map(order => (
+                              <TableRow key={order.id}>
+                                <TableCell className="font-medium">
+                                  {order.orderNumber || `#${order.id}`}
+                                </TableCell>
+                                <TableCell>
+                                  {/* Try to get name from multiple sources */}
+                                  {order.name || 
+                                   (order.billingDetails ? 
+                                    (() => {
+                                      try {
+                                        const details = JSON.parse(order.billingDetails);
+                                        return details.name || details.firstName || '';
+                                      } catch (e) {
+                                        return '';
+                                      }
+                                    })() : '')
+                                  }
+                                  <div className="text-xs text-muted-foreground max-w-[180px] truncate">
+                                    {order.shippingAddress}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-xs">
+                                    {order.email && (
+                                      <div className="mb-1 truncate max-w-[140px]">
+                                        <Mail className="h-3 w-3 inline mr-1" />
+                                        {order.email}
+                                      </div>
+                                    )}
+                                    {order.phone && (
+                                      <div>
+                                        <Phone className="h-3 w-3 inline mr-1" />
+                                        {formatPhoneNumber(order.phone)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  ₹{safeFormatPrice(order.totalAmount)}
+                                  <div className="text-xs text-muted-foreground">
+                                    {getTotalItems(order.id)} items
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={getOrderStatusBadge(order.status)}>
+                                    {order.status}
+                                  </Badge>
+                                  {order.isShipped && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      <CheckCircle className="h-3 w-3 inline mr-1" />
+                                      Shipped
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={getPaymentStatusBadge(order.paymentStatus)}>
+                                    {order.paymentStatus}
+                                  </Badge>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {order.paymentMethod}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {formatDate(order.createdAt)}
+                                  {order.updatedAt && order.updatedAt !== order.createdAt && (
+                                    <div className="text-xs text-muted-foreground">
+                                      Updated: {formatDate(order.updatedAt)}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => {
+                                        setSelectedOrder(order);
+                                        setIsOrderDetailOpen(true);
+                                      }}>
+                                        <EyeIcon className="h-4 w-4 mr-2" />
+                                        View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                          <CircleIcon className="h-4 w-4 mr-2" />
+                                          Update Status
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent>
+                                          <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "pending")}>
+                                            <CircleIcon className="h-4 w-4 mr-2 text-yellow-500" />
+                                            Mark as Pending
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "processing")}>
+                                            <CircleIcon className="h-4 w-4 mr-2 text-blue-500" />
+                                            Mark as Processing
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "shipped")}>
+                                            <CircleIcon className="h-4 w-4 mr-2 text-purple-500" />
+                                            Mark as Shipped
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "delivered")}>
+                                            <CircleIcon className="h-4 w-4 mr-2 text-green-500" />
+                                            Mark as Delivered
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "cancelled")}>
+                                            <CircleIcon className="h-4 w-4 mr-2 text-red-500" />
+                                            Mark as Cancelled
+                                          </DropdownMenuItem>
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuSub>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => {
+                                        const isCurrentlyShipped = !!order.isShipped;
+                                        updateOrderShippingDetails(
+                                          order.id, 
+                                          !isCurrentlyShipped,
+                                          isCurrentlyShipped ? undefined : order.trackingNumber
+                                        );
+                                      }}>
+                                        {order.isShipped ? (
+                                          <>
+                                            <XCircleIcon className="h-4 w-4 mr-2" />
+                                            Mark as Not Shipped
+                                          </>
+                                        ) : (
+                                          <>
+                                            <CheckCircleIcon className="h-4 w-4 mr-2" />
+                                            Mark as Shipped
+                                          </>
+                                        )}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => {
+                                        // Open dialog to enter tracking number
+                                        const trackingNumber = window.prompt("Enter tracking number:", order.trackingNumber || "");
+                                        if (trackingNumber !== null) {
+                                          updateOrderShippingDetails(order.id, true, trackingNumber);
+                                        }
+                                      }}>
+                                        <TruckIcon className="h-4 w-4 mr-2" />
+                                        Update Tracking
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => sendOrderConfirmationEmail(order.id)}>
+                                        <MailIcon className="h-4 w-4 mr-2" />
+                                        Resend Confirmation
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

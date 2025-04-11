@@ -8,9 +8,8 @@ import {
   settings, type Setting, type InsertSetting
 } from "@shared/schema";
 import { IStorage } from "./storage";
-import { verifyToken } from './otpUtils';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { eq, like, ilike, desc, and, or, count, max, asc } from 'drizzle-orm';
+import { eq, like, ilike, desc, and, or, count, max, asc, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { PgTable } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -147,7 +146,14 @@ export class PostgreSQLStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return this.executeWithRetry(async () => {
-      const results = await this.db.select().from(users).where(eq(users.username, username));
+      const results = await this.db.select().from(users).where(eq(users.email, username));
+      return results.length > 0 ? results[0] : undefined;
+    });
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(users).where(eq(users.email, email));
       return results.length > 0 ? results[0] : undefined;
     });
   }
@@ -162,30 +168,7 @@ export class PostgreSQLStorage implements IStorage {
   async isAdmin(userId: number): Promise<boolean> {
     return this.executeWithRetry(async () => {
       const user = await this.getUser(userId);
-      return user?.isAdmin || false;
-    });
-  }
-
-  async enableOtp(userId: number, secret: string): Promise<User | undefined> {
-    return this.executeWithRetry(async () => {
-      const updated = await this.db
-        .update(users)
-        .set({ otpSecret: secret, otpEnabled: true })
-        .where(eq(users.id, userId))
-        .returning();
-      
-      return updated.length > 0 ? updated[0] : undefined;
-    });
-  }
-
-  async verifyOtp(userId: number, token: string): Promise<boolean> {
-    return this.executeWithRetry(async () => {
-      const user = await this.getUser(userId);
-      if (!user || !user.otpEnabled || !user.otpSecret) {
-        return false;
-      }
-      
-      return verifyToken(token, user.otpSecret);
+      return user?.role === 'admin';
     });
   }
 
@@ -497,6 +480,17 @@ export class PostgreSQLStorage implements IStorage {
     });
   }
 
+  async getContactById(id: number): Promise<Contact | undefined> {
+    return this.executeWithRetry(async () => {
+      const result = await this.db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, id));
+      
+      return result.length > 0 ? result[0] : undefined;
+    });
+  }
+
   async getContacts(): Promise<Contact[]> {
     return this.executeWithRetry(async () => {
       return await this.db.select().from(contacts);
@@ -525,7 +519,6 @@ export class PostgreSQLStorage implements IStorage {
       }
     });
   }
-
   async updateOrder(id: number, orderUpdate: Partial<Order>): Promise<Order> {
     return this.executeWithRetry(async () => {
       const updated = await this.db
@@ -743,7 +736,6 @@ export class PostgreSQLStorage implements IStorage {
       };
     });
   }
-
   async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
     return this.executeWithRetry(async () => {
       const newOrderItem = await this.db.insert(orderItems).values(orderItem).returning();
@@ -766,7 +758,6 @@ export class PostgreSQLStorage implements IStorage {
       return newSetting[0];
     });
   }
-
   async updateSetting(key: string, settingUpdate: Partial<Setting>): Promise<Setting> {
     return this.executeWithRetry(async () => {
       const updated = await this.db
@@ -782,7 +773,6 @@ export class PostgreSQLStorage implements IStorage {
       return updated[0];
     });
   }
-
   async deleteSetting(key: string): Promise<boolean> {
     return this.executeWithRetry(async () => {
       const result = await this.db

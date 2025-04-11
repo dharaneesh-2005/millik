@@ -256,9 +256,9 @@ export default function Contact() {
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800">Address</h3>
                       <p className="text-gray-600">
-                        123 Millet Street<br />
-                        Anna Nagar, Chennai<br />
-                        Tamil Nadu, India 600040
+                        3/179A, Malaipalayam<br />
+                        Thonguttipalayam, Tiruppur<br />
+                        Tamil Nadu, India 641665
                       </p>
                     </div>
                   </motion.div>
@@ -273,8 +273,8 @@ export default function Contact() {
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800">Phone</h3>
                       <p className="text-gray-600">
-                        +91 234 567 890<br />
-                        +91 987 654 321
+                        +91 7548871552<br />
+                        +91 9080064833
                       </p>
                     </div>
                   </motion.div>
@@ -289,8 +289,8 @@ export default function Contact() {
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800">Email</h3>
                       <p className="text-gray-600">
-                        info@millikit.com<br />
-                        support@millikit.com
+                        skdharaneesh6@gmail.com<br />
+                        skdhara2222@gmail.com
                       </p>
                     </div>
                   </motion.div>

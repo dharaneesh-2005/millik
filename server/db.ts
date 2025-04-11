@@ -96,16 +96,64 @@ export async function initializeDatabase(url: string) {
       
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        username TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        name TEXT,
-        email TEXT,
-        phone TEXT,
-        address TEXT,
-        otp_secret TEXT,
-        otp_enabled BOOLEAN DEFAULT FALSE,
-        is_admin BOOLEAN DEFAULT FALSE
+        email TEXT NOT NULL UNIQUE,
+        hashed_password TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT DEFAULT 'customer',
+        created_at TIMESTAMP DEFAULT NOW()
       );
+      
+      -- Update existing users table structure if needed
+      DO $$
+      BEGIN
+        -- Make username column nullable if it exists
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'username') THEN
+          ALTER TABLE users ALTER COLUMN username DROP NOT NULL;
+        END IF;
+        
+        -- Make password column nullable if it exists
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password') THEN
+          ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
+        END IF;
+
+        -- Check if we need to rename password column to hashed_password
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password') AND 
+           NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'hashed_password') THEN
+          -- Add hashed_password column if it doesn't exist
+          ALTER TABLE users ADD COLUMN hashed_password TEXT;
+          -- Copy values from password to hashed_password
+          UPDATE users SET hashed_password = password;
+          -- Make hashed_password NOT NULL after data is copied
+          ALTER TABLE users ALTER COLUMN hashed_password SET NOT NULL;
+          -- Optionally drop the old password column if you're sure it's safe to do so
+          -- ALTER TABLE users DROP COLUMN password;
+        END IF;
+        
+        -- If username exists but email doesn't, copy username to email
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'username') AND 
+           EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email') THEN
+          -- Update users where email is null
+          UPDATE users SET email = username WHERE email IS NULL;
+          
+          -- Also update admin users who might have non-email usernames
+          UPDATE users SET email = 'admin@millikit.com' WHERE username = 'admin_millikit' AND email IS NULL;
+        END IF;
+        
+        -- Add any missing columns
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role') THEN
+          ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'customer';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'name') THEN
+          ALTER TABLE users ADD COLUMN name TEXT;
+          UPDATE users SET name = username WHERE name IS NULL;
+          ALTER TABLE users ALTER COLUMN name SET NOT NULL;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'created_at') THEN
+          ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
+        END IF;
+      END $$;
       
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
@@ -211,8 +259,8 @@ export async function initializeDatabase(url: string) {
     if (adminUser.length === 0) {
       console.log('Creating admin user...');
       await migrationDb.execute(`
-        INSERT INTO users (username, password, name, is_admin) 
-        VALUES ('admin_millikit', 'the_millikit', 'Admin', true)
+        INSERT INTO users (username, password, email, name, role) 
+        VALUES ('admin_millikit', 'the_millikit', 'admin@millikit.com', 'Admin', 'admin')
       `);
       console.log('Admin user created successfully');
     } else {

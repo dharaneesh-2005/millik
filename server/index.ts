@@ -58,13 +58,59 @@ app.use((req, res, next) => {
   // Initialize the database if DATABASE_URL is available
   if (process.env.DATABASE_URL) {
     try {
-      await initializeDatabase(process.env.DATABASE_URL);
-      log('Database initialized successfully');
+      console.log("Database URL found, length:", process.env.DATABASE_URL.length);
+      // Don't log the full URL for security
+      console.log("Database URL defined, connecting...");
+      console.log("Attempting to initialize database connection...");
+      
+      const dbConnection = await initializeDatabase(process.env.DATABASE_URL);
+      
+      if (dbConnection && dbConnection.client && dbConnection.db) {
+        log('Database initialized successfully');
+        
+        // Test the connection
+        try {
+          const result = await dbConnection.db.execute('SELECT NOW()');
+          const serverTime = result[0] && result[0].now ? result[0].now : 'unknown';
+          log(`Database connection test passed. Server time: ${serverTime}`);
+        } catch (testError) {
+          log('Database connection test failed: ' + (testError instanceof Error ? testError.message : String(testError)));
+        }
+      } else {
+        log('Database initialization failed: Client or DB not returned');
+      }
     } catch (error) {
-      log(`Error initializing database: ${error}`);
+      log(`Error initializing database: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        log('Error stack: ' + error.stack);
+      }
+      
+      // Try to identify specific connection issues
+      if (error instanceof Error) {
+        if (error.message.includes('ECONNREFUSED')) {
+          log('Could not connect to PostgreSQL server. Check if the server is running and accessible.');
+        } else if (error.message.includes('password authentication failed')) {
+          log('Database authentication failed. Check your username and password.');
+        } else if (error.message.includes('database') && error.message.includes('does not exist')) {
+          log('Database does not exist. Check your database name.');
+        } else if (error.message.includes('role') && error.message.includes('does not exist')) {
+          log('Database role/user does not exist. Check your database username.');
+        }
+      }
     }
   } else {
-    log('No DATABASE_URL found, skipping database initialization');
+    log('No DATABASE_URL found, skipping database initialization. Check your .env file.');
+    
+    // Print environment variables for debugging (redacted for security)
+    const envVars = Object.keys(process.env)
+      .filter(key => key.includes('PG') || key.includes('DATABASE') || key === 'NODE_ENV')
+      .reduce((obj, key) => {
+        const value = process.env[key];
+        obj[key] = value ? `Defined (length: ${value.length})` : 'Not defined';
+        return obj;
+      }, {} as Record<string, string>);
+    
+    log('Environment variables: ' + JSON.stringify(envVars));
   }
 
   const server = await registerRoutes(app);
