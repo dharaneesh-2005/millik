@@ -54,6 +54,8 @@ export interface IStorage {
   deleteCartItemsByProductId(productId: number): Promise<void>;
 
   // Contact operations
+  createContact(contact: InsertContact): Promise<Contact>;
+  getContactById(id: number): Promise<Contact | undefined>;
   getContacts(): Promise<Contact[]>;
 
   // Order management

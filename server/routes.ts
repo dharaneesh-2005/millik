@@ -97,6 +97,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
   });
+  
+  // Test email endpoint (for development)
+  app.get("/api/admin/test-email", isAdmin, async (req, res) => {
+    try {
+      const email = req.query.email as string || "test@example.com";
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+      
+      // Import email modules
+      const { sendEmail } = await import('./email');
+      
+      // Send a simple test email
+      const result = await sendEmail(
+        email,
+        "Millikit - Test Email",
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Test Email</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #4CAF50;">Millikit Email Test</h1>
+          </div>
+          <p>This is a test email from Millikit to verify that email sending is working correctly.</p>
+          <p>The current time is: ${new Date().toLocaleString()}</p>
+          <p>If you're receiving this email, it means the email configuration is working properly!</p>
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; font-size: 12px; color: #777;">
+            <p>&copy; ${new Date().getFullYear()} Millikit. All rights reserved.</p>
+          </div>
+        </body>
+        </html>
+        `
+      );
+      
+      if (result.success) {
+        res.status(200).json({ 
+          success: true, 
+          message: "Test email sent successfully", 
+          messageId: result.messageId 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: "Failed to send test email", 
+          error: result.error 
+        });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Error sending test email", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   // API routes
   app.get("/api/products", async (req, res) => {
