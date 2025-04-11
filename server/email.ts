@@ -44,6 +44,206 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Send shipping notification email
+export const sendShippingNotificationEmail = async (
+  order: Order,
+  trackingId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { email, orderNumber } = order;
+
+    if (!email) {
+      return {
+        success: false,
+        error: "No email address provided for the order",
+      };
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your Order Has Been Shipped - ${STORE_NAME}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+          /* Base styles */
+          body, td, th, p { font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; }
+          
+          /* Mobile responsive styles */
+          @media only screen and (max-width: 600px) {
+            .mobile-header {
+              padding: 20px 15px !important;
+            }
+            .mobile-logo {
+              max-width: 120px !important;
+            }
+            .mobile-content {
+              padding: 20px 15px !important;
+            }
+            .mobile-table {
+              display: block !important;
+              width: 100% !important;
+            }
+            .mobile-table-cell {
+              padding: 10px 8px !important;
+            }
+            .mobile-hide {
+              display: none !important;
+            }
+            .mobile-stack {
+              display: block !important;
+              width: 100% !important;
+            }
+            .mobile-stack[style*="display: none"] {
+              display: block !important;
+            }
+            .mobile-center {
+              text-align: center !important;
+            }
+            .mobile-padding {
+              padding: 0 10px !important;
+            }
+            .mobile-spacer {
+              height: 15px !important;
+            }
+            .mobile-support-card {
+              margin-bottom: 15px !important;
+              width: 100% !important;
+            }
+          }
+        </style>
+      </head>
+      <body style="font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #4B5563; max-width: 800px; margin: 0 auto; padding: 10px; background-color: #F9FAFB;">
+        <!-- Enhanced Header with logo and background -->
+        <div class="mobile-header" style="text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #d1fae5;">
+          <img class="mobile-logo" src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 180px; margin-bottom: 20px;">
+          <h1 style="margin: 10px 0; color: #065F46; font-weight: 700; font-size: 32px; letter-spacing: -0.5px;">Your Order Has Been Shipped!</h1>
+          <div style="width: 80px; height: 4px; background-color: #059669; margin: 15px auto;"></div>
+          <p style="margin: 15px 0 0; color: #059669; font-size: 18px; font-weight: 500;">Your package is on the way!</p>
+          <p style="margin: 5px 0 0; color: #6B7280; font-size: 14px;">Order #: ${orderNumber}</p>
+        </div>
+        
+        <!-- Shipping Information -->
+        <div class="mobile-content" style="background-color: #FFFFFF; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+          <p style="margin-bottom: 20px; font-size: 17px;">Dear Customer,</p>
+          <p style="margin-bottom: 25px; font-size: 16px; color: #4B5563;">Great news! Your order has been shipped and is on its way to you. You can track your package using the tracking information below.</p>
+          
+          <!-- Tracking Information Box -->
+          <div style="background-color: #F0FDF4; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #059669;">
+            <h3 style="margin-top: 0; color: #065F46; font-weight: 600; font-size: 18px;">Tracking Information</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+              <tr>
+                <td style="padding: 8px 0; color: #4B5563;"><strong>Order Number:</strong></td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 600;">${orderNumber}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #4B5563;"><strong>Tracking ID:</strong></td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 600;">${trackingId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #4B5563;"><strong>Shipping Date:</strong></td>
+                <td style="padding: 8px 0; text-align: right;">${new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Tracking Instructions -->
+          <div style="text-align: center; margin: 30px 0; background-color: #f0fdf4; padding: 20px; border-radius: 10px;">
+            <p style="color: #059669; font-weight: 600; font-size: 16px; margin: 0;">
+              You can track your package using the tracking ID at the courier website.
+            </p>
+          </div>
+          
+          <!-- Delivery Estimate -->
+          <div style="background: linear-gradient(to right, #f0fdf4, #ecfdf5); border-radius: 10px; padding: 20px; border-left: 4px solid #059669; margin-top: 25px;">
+            <h3 style="margin-top: 0; color: #065F46; font-weight: 600; font-size: 18px;">Estimated Delivery</h3>
+            <p style="margin: 5px 0; color: #374151; font-weight: 500;">Your order is expected to arrive within 3-5 business days.</p>
+            <p style="margin: 15px 0 5px; color: #6B7280; font-size: 14px; font-style: italic;">Delivery times may vary based on your location.</p>
+          </div>
+        </div>
+        
+        <!-- Help and Support - Enhanced design -->
+        <div style="background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%); border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03); border: 1px solid #E5E7EB;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background-color: #dcfce7; width: 60px; height: 60px; border-radius: 50%; text-align: center; line-height: 60px; margin-bottom: 15px;">
+              <span style="color: #059669; font-size: 24px; font-weight: bold;">?</span>
+            </div>
+            <h2 style="margin: 10px 0; color: #065F46; font-weight: 600; font-size: 24px;">Need Help?</h2>
+            <div style="width: 60px; height: 3px; background-color: #059669; margin: 15px auto;"></div>
+            <p style="color: #4B5563; margin-bottom: 20px;">If you have any questions about your shipment, our customer service team is here to help.</p>
+          </div>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+            <div class="mobile-support-card" style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
+              <div style="margin-bottom: 12px; width: 40px; height: 40px; background-color: #f0fdf4; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 20px; color: #059669;">✉</span>
+              </div>
+              <div style="font-weight: 600; color: #065F46; margin-bottom: 8px; font-size: 17px;">Email Support</div>
+              <a href="mailto:support@millikit.com" style="color: #059669; text-decoration: none; font-weight: 500; display: block;">support@millikit.com</a>
+              <p style="margin-top: 8px; font-size: 13px; color: #6B7280;">We typically respond within 24 hours</p>
+            </div>
+            
+            <div class="mobile-support-card" style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
+              <div style="margin-bottom: 12px; width: 40px; height: 40px; background-color: #f0fdf4; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 20px; color: #059669;">📞</span>
+              </div>
+              <div style="font-weight: 600; color: #065F46; margin-bottom: 8px; font-size: 17px;">Phone Support</div>
+              <a href="tel:+917548871552" style="color: #059669; text-decoration: none; font-weight: 500; display: block;">+91 7548871552</a>
+              <p style="margin-top: 8px; font-size: 13px; color: #6B7280;">Available Mon-Fri, 9am-6pm IST</p>
+            </div>
+          </div>
+          
+          <div style="text-align: center; padding: 15px; background-color: #f0fdf4; border-radius: 10px;">
+            <p style="color: #065F46; font-weight: 500;">Visit <a href="https://millik-1.onrender.com" style="color: #059669; text-decoration: none; font-weight: 600;">millik-1.onrender.com</a> to explore more premium millet products</p>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="text-align: center; padding: 30px 20px; color: #6B7280; font-size: 14px; background-color: #F3F4F6; border-radius: 12px; margin-top: 10px;">
+          <img src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 120px; margin-bottom: 15px;">
+          <p style="margin-bottom: 10px; font-weight: 500;">&copy; ${new Date().getFullYear()} ${STORE_NAME}. All rights reserved.</p>
+          <p style="margin-bottom: 20px; font-style: italic; color: #059669;">Premium Millet Products for a Healthier Lifestyle</p>
+          
+          <!-- Navigation Links with improved styling -->
+          <div style="margin-bottom: 25px; display: inline-block; background-color: #FFFFFF; padding: 12px 20px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <a href="https://millik-1.onrender.com" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">Home</a>
+            <a href="https://millik-1.onrender.com/products" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">Products</a>
+            <a href="https://millik-1.onrender.com/about" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">About Us</a>
+            <a href="https://millik-1.onrender.com/contact" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">Contact</a>
+          </div>
+          
+          <!-- Social Media Icons (placeholder) -->
+          <div style="margin-bottom: 20px;">
+            <span style="display: inline-block; width: 36px; height: 36px; background-color: #059669; border-radius: 50%; margin: 0 5px; text-align: center; line-height: 36px; color: white; font-weight: bold;">f</span>
+            <span style="display: inline-block; width: 36px; height: 36px; background-color: #059669; border-radius: 50%; margin: 0 5px; text-align: center; line-height: 36px; color: white; font-weight: bold;">i</span>
+            <span style="display: inline-block; width: 36px; height: 36px; background-color: #059669; border-radius: 50%; margin: 0 5px; text-align: center; line-height: 36px; color: white; font-weight: bold;">t</span>
+          </div>
+          
+          <p style="color: #9CA3AF; font-size: 12px; border-top: 1px solid #E5E7EB; padding-top: 15px;">This is an automated email. Please do not reply to this message.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return await sendEmail(
+      email,
+      `Your Order ${orderNumber} Has Been Shipped - ${STORE_NAME}`,
+      html,
+    );
+  } catch (error) {
+    console.error(
+      "Error generating shipping notification email:",
+      error instanceof Error ? error.message : String(error),
+    );
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
 // Send email
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
