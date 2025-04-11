@@ -141,6 +141,7 @@ export const orders = pgTable("orders", {
   shippingMethod: text("shipping_method").default("standard"),
   notes: text("notes"),
   couponCode: text("coupon_code"),
+  trackingId: text("tracking_id"),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({

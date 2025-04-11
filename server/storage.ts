@@ -67,6 +67,7 @@ export interface IStorage {
   getOrdersByEmail(email: string): Promise<Order[]>;
   getOrders(): Promise<Order[]>;
   getOrdersPaginated(page: number, limit: number): Promise<{ orders: Order[], total: number }>;
+  deleteOrder(id: number): Promise<boolean>;
   
   // Order items
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
