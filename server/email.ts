@@ -128,11 +128,61 @@ export const sendOrderConfirmationEmail = async (
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Order Confirmation - ${orderNumber}</title>
+        <style>
+          @media only screen and (max-width: 600px) {
+            .mobile-container {
+              width: 100% !important;
+              padding: 10px !important;
+            }
+            .mobile-header {
+              padding: 20px 15px !important;
+            }
+            .mobile-logo {
+              max-width: 150px !important;
+            }
+            .mobile-content {
+              padding: 15px !important;
+            }
+            .mobile-table {
+              display: block !important;
+              width: 100% !important;
+            }
+            .mobile-table-cell {
+              display: block !important;
+              width: 100% !important;
+              text-align: left !important;
+              padding: 8px 15px !important;
+            }
+            .mobile-support-card {
+              min-width: 100% !important;
+              margin-bottom: 15px !important;
+            }
+            .mobile-hide {
+              display: none !important;
+            }
+            .mobile-stack {
+              display: block !important;
+              width: 100% !important;
+            }
+            .mobile-stack[style*="display: none"] {
+              display: block !important;
+            }
+            .mobile-center {
+              text-align: center !important;
+            }
+            .mobile-padding {
+              padding: 0 10px !important;
+            }
+            .mobile-spacer {
+              height: 15px !important;
+            }
+          }
+        </style>
       </head>
-      <body style="font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #4B5563; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #F9FAFB;">
+      <body style="font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #4B5563; max-width: 800px; margin: 0 auto; padding: 10px; background-color: #F9FAFB;">
         <!-- Enhanced Header with logo and background -->
-        <div style="text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #d1fae5;">
-          <img src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 180px; margin-bottom: 20px;">
+        <div class="mobile-header" style="text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #d1fae5;">
+          <img class="mobile-logo" src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 180px; margin-bottom: 20px;">
           <h1 style="margin: 10px 0; color: #065F46; font-weight: 700; font-size: 32px; letter-spacing: -0.5px;">Order Confirmation</h1>
           <div style="width: 80px; height: 4px; background-color: #059669; margin: 15px auto;"></div>
           <p style="margin: 15px 0 0; color: #059669; font-size: 18px; font-weight: 500;">Thank you for shopping with us!</p>
@@ -140,7 +190,7 @@ export const sendOrderConfirmationEmail = async (
         </div>
         
         <!-- Order Info Card -->
-        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+        <div class="mobile-content" style="background-color: #FFFFFF; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
           <p style="margin-bottom: 20px; font-size: 17px;">Dear Customer,</p>
           <p style="margin-bottom: 25px; font-size: 16px; color: #4B5563;">Thank you for your order! We're pleased to confirm that your order has been received and is being processed. Your premium millet products will be on their way to you soon.</p>
           
@@ -237,13 +287,13 @@ export const sendOrderConfirmationEmail = async (
         <div style="background-color: #FFFFFF; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
           <h2 style="margin-top: 0; color: #065F46; font-weight: 600; font-size: 22px; margin-bottom: 20px; border-bottom: 1px solid #E5E7EB; padding-bottom: 10px;">Order Details</h2>
           
-          <table style="width: 100%; border-collapse: collapse;">
+          <table class="mobile-table" style="width: 100%; border-collapse: collapse;">
             <thead>
               <tr style="background-color: #F3F4F6;">
-                <th style="padding: 12px; text-align: left; border-top-left-radius: 8px; border-bottom-left-radius: 8px;">Product</th>
-                <th style="padding: 12px; text-align: center;">Quantity</th>
-                <th style="padding: 12px; text-align: right;">Price</th>
-                <th style="padding: 12px; text-align: right; border-top-right-radius: 8px; border-bottom-right-radius: 8px;">Total</th>
+                <th class="mobile-table-cell" style="padding: 12px; text-align: left; border-top-left-radius: 8px; border-bottom-left-radius: 8px;">Product</th>
+                <th class="mobile-table-cell mobile-hide" style="padding: 12px; text-align: center;">Quantity</th>
+                <th class="mobile-table-cell mobile-hide" style="padding: 12px; text-align: right;">Price</th>
+                <th class="mobile-table-cell" style="padding: 12px; text-align: right; border-top-right-radius: 8px; border-bottom-right-radius: 8px;">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -254,18 +304,22 @@ export const sendOrderConfirmationEmail = async (
 
                   return `
                   <tr>
-                    <td style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB;">
+                    <td class="mobile-table-cell" style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB;">
                       <div style="display: flex; align-items: center;">
                         <img src="${imageUrl}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
                         <div>
                           <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">${item.name}</div>
                           ${item.weight ? `<div style="color: #6B7280; font-size: 14px;">Weight: ${item.weight}</div>` : ""}
+                          <div class="mobile-stack" style="display: none; margin-top: 8px; font-size: 14px;">
+                            <div style="margin-bottom: 4px;"><span style="color: #6B7280;">Qty:</span> <span style="font-weight: 500;">${item.quantity}</span></div>
+                            <div style="margin-bottom: 4px;"><span style="color: #6B7280;">Price:</span> <span style="font-weight: 500;">₹${parseFloat(item.price.toString()).toFixed(2)}</span></div>
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB; text-align: center; color: #4B5563;">${item.quantity}</td>
-                    <td style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB; text-align: right; color: #4B5563;">₹${parseFloat(item.price.toString()).toFixed(2)}</td>
-                    <td style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB; text-align: right; font-weight: 600; color: #111827;">₹${parseFloat(item.subtotal.toString()).toFixed(2)}</td>
+                    <td class="mobile-table-cell mobile-hide" style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB; text-align: center; color: #4B5563;">${item.quantity}</td>
+                    <td class="mobile-table-cell mobile-hide" style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB; text-align: right; color: #4B5563;">₹${parseFloat(item.price.toString()).toFixed(2)}</td>
+                    <td class="mobile-table-cell" style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB; text-align: right; font-weight: 600; color: #111827;">₹${parseFloat(item.subtotal.toString()).toFixed(2)}</td>
                   </tr>
                 `;
                 })
@@ -273,8 +327,8 @@ export const sendOrderConfirmationEmail = async (
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="3" style="padding: 16px 12px; text-align: right; color: #4B5563;"><strong>Subtotal:</strong></td>
-                <td style="padding: 16px 12px; text-align: right; color: #4B5563;">₹${parseFloat(subtotalAmount.toString()).toFixed(2)}</td>
+                <td class="mobile-table-cell" colspan="3" style="padding: 16px 12px; text-align: right; color: #4B5563;"><strong>Subtotal:</strong></td>
+                <td class="mobile-table-cell" style="padding: 16px 12px; text-align: right; color: #4B5563;">₹${parseFloat(subtotalAmount.toString()).toFixed(2)}</td>
               </tr>
               ${
                 discountAmount && parseFloat(discountAmount.toString()) > 0
@@ -329,7 +383,7 @@ export const sendOrderConfirmationEmail = async (
           </div>
           
           <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
-            <div style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
+            <div class="mobile-support-card" style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
               <div style="margin-bottom: 12px; width: 40px; height: 40px; background-color: #f0fdf4; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
                 <span style="font-size: 20px; color: #059669;">✉</span>
               </div>
@@ -338,7 +392,7 @@ export const sendOrderConfirmationEmail = async (
               <p style="margin-top: 8px; font-size: 13px; color: #6B7280;">We typically respond within 24 hours</p>
             </div>
             
-            <div style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
+            <div class="mobile-support-card" style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
               <div style="margin-bottom: 12px; width: 40px; height: 40px; background-color: #f0fdf4; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
                 <span style="font-size: 20px; color: #059669;">📞</span>
               </div>
