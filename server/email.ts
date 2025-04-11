@@ -130,11 +130,13 @@ export const sendOrderConfirmationEmail = async (
         <title>Order Confirmation - ${orderNumber}</title>
       </head>
       <body style="font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #4B5563; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #F9FAFB;">
-        <!-- Header with logo -->
-        <div style="text-align: center; margin-bottom: 20px; background-color: #FFFFFF; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-          <img src="${STORE_LOGO}" alt="${STORE_NAME}" style="max-width: 180px;">
-          <h1 style="margin: 20px 0 10px; color: #065F46; font-weight: 600; font-size: 28px;">Order Confirmation</h1>
-          <p style="margin: 0; color: #6B7280; font-size: 16px;">Thank you for shopping with us!</p>
+        <!-- Enhanced Header with logo and background -->
+        <div style="text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #d1fae5;">
+          <img src="${STORE_LOGO}" alt="${STORE_NAME}" style="max-width: 180px; margin-bottom: 20px;">
+          <h1 style="margin: 10px 0; color: #065F46; font-weight: 700; font-size: 32px; letter-spacing: -0.5px;">Order Confirmation</h1>
+          <div style="width: 80px; height: 4px; background-color: #059669; margin: 15px auto;"></div>
+          <p style="margin: 15px 0 0; color: #059669; font-size: 18px; font-weight: 500;">Thank you for shopping with us!</p>
+          <p style="margin: 5px 0 0; color: #6B7280; font-size: 14px;">Order #: ${orderNumber}</p>
         </div>
         
         <!-- Order Info Card -->
@@ -223,13 +225,11 @@ export const sendOrderConfirmationEmail = async (
             </table>
           </div>
           
-          <!-- Track order button -->
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${BASE_URL}/orders/track?email=${encodeURIComponent(email)}&orderNumber=${encodeURIComponent(orderNumber)}" 
-              style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 14px 30px; 
-              border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
-              Track Your Order
-            </a>
+          <!-- Order confirmation note -->
+          <div style="text-align: center; margin: 30px 0; background-color: #f0fdf4; padding: 20px; border-radius: 10px;">
+            <p style="color: #059669; font-weight: 600; font-size: 16px; margin: 0;">
+              Thank you for choosing Millikit. We're preparing your order with care!
+            </p>
           </div>
         </div>
         
@@ -302,44 +302,79 @@ export const sendOrderConfirmationEmail = async (
           </table>
         </div>
         
-        <!-- Shipping Information -->
-        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-          <h2 style="margin-top: 0; color: #065F46; font-weight: 600; font-size: 22px; margin-bottom: 15px;">Shipping Information</h2>
-          <div style="background-color: #F9FAFB; border-radius: 8px; padding: 15px; border: 1px solid #E5E7EB;">
-            <p style="margin: 5px 0; color: #4B5563;">${order.shippingAddress}</p>
+        <!-- Shipping Information - Enhanced -->
+        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); border: 1px solid #E5E7EB;">
+          <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <div style="margin-right: 15px; width: 40px; height: 40px; background-color: #f0fdf4; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 20px; color: #059669;">🚚</span>
+            </div>
+            <h2 style="margin: 0; color: #065F46; font-weight: 600; font-size: 22px;">Shipping Information</h2>
+          </div>
+          
+          <div style="background: linear-gradient(to right, #f0fdf4, #ecfdf5); border-radius: 10px; padding: 20px; border-left: 4px solid #059669;">
+            <p style="margin: 5px 0; color: #374151; font-weight: 500;">${order.shippingAddress}</p>
+            <p style="margin: 15px 0 5px; color: #6B7280; font-size: 14px; font-style: italic;">Your order will be processed and shipped within 1-2 business days.</p>
           </div>
         </div>
         
-        <!-- Help and Support -->
-        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-          <h2 style="margin-top: 0; color: #065F46; font-weight: 600; font-size: 22px; margin-bottom: 15px;">Need Help?</h2>
-          <p style="color: #4B5563; margin-bottom: 15px;">If you have any questions about your order, please contact our customer service:</p>
-          
-          <div style="display: flex; margin-bottom: 20px;">
-            <div style="flex: 1; padding: 15px; text-align: center; background-color: #F0FDF4; border-radius: 8px; margin-right: 10px;">
-              <div style="font-weight: 600; color: #065F46; margin-bottom: 8px;">Email Support</div>
-              <a href="mailto:support@millikit.com" style="color: #059669; text-decoration: none; font-weight: 500;">support@millikit.com</a>
+        <!-- Help and Support - Enhanced design -->
+        <div style="background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%); border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03); border: 1px solid #E5E7EB;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background-color: #dcfce7; width: 60px; height: 60px; border-radius: 50%; text-align: center; line-height: 60px; margin-bottom: 15px;">
+              <span style="color: #059669; font-size: 24px; font-weight: bold;">?</span>
             </div>
-            <div style="flex: 1; padding: 15px; text-align: center; background-color: #F0FDF4; border-radius: 8px;">
-              <div style="font-weight: 600; color: #065F46; margin-bottom: 8px;">Phone Support</div>
-              <a href="tel:+917548871552" style="color: #059669; text-decoration: none; font-weight: 500;">+91 7548871552</a>
+            <h2 style="margin: 10px 0; color: #065F46; font-weight: 600; font-size: 24px;">Need Help?</h2>
+            <div style="width: 60px; height: 3px; background-color: #059669; margin: 15px auto;"></div>
+            <p style="color: #4B5563; margin-bottom: 20px;">If you have any questions about your order, our customer service team is here to help.</p>
+          </div>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+            <div style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
+              <div style="margin-bottom: 12px; width: 40px; height: 40px; background-color: #f0fdf4; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 20px; color: #059669;">✉</span>
+              </div>
+              <div style="font-weight: 600; color: #065F46; margin-bottom: 8px; font-size: 17px;">Email Support</div>
+              <a href="mailto:support@millikit.com" style="color: #059669; text-decoration: none; font-weight: 500; display: block;">support@millikit.com</a>
+              <p style="margin-top: 8px; font-size: 13px; color: #6B7280;">We typically respond within 24 hours</p>
+            </div>
+            
+            <div style="flex: 1; min-width: 200px; padding: 20px; text-align: center; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03); transition: transform 0.3s; border: 1px solid #d1fae5;">
+              <div style="margin-bottom: 12px; width: 40px; height: 40px; background-color: #f0fdf4; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 20px; color: #059669;">📞</span>
+              </div>
+              <div style="font-weight: 600; color: #065F46; margin-bottom: 8px; font-size: 17px;">Phone Support</div>
+              <a href="tel:+917548871552" style="color: #059669; text-decoration: none; font-weight: 500; display: block;">+91 7548871552</a>
+              <p style="margin-top: 8px; font-size: 13px; color: #6B7280;">Available Mon-Fri, 9am-6pm IST</p>
             </div>
           </div>
           
-          <p style="color: #4B5563; text-align: center;">Visit our website at <a href="${BASE_URL}" style="color: #059669; text-decoration: none; font-weight: 500;">${BASE_URL}</a> to track your order status.</p>
+          <div style="text-align: center; padding: 15px; background-color: #f0fdf4; border-radius: 10px;">
+            <p style="color: #065F46; font-weight: 500;">Visit <a href="https://millik-1.onrender.com" style="color: #059669; text-decoration: none; font-weight: 600;">millik-1.onrender.com</a> to explore more premium millet products</p>
+          </div>
         </div>
         
         <!-- Footer -->
-        <div style="text-align: center; padding: 20px; color: #6B7280; font-size: 14px;">
-          <p style="margin-bottom: 10px;">&copy; ${new Date().getFullYear()} ${STORE_NAME}. All rights reserved.</p>
-          <p style="margin-bottom: 20px;">Premium Millet Products for a Healthier Lifestyle</p>
-          <div style="margin-bottom: 20px;">
-            <a href="${BASE_URL}" style="color: #059669; text-decoration: none; margin: 0 10px;">Home</a>
-            <a href="${BASE_URL}/products" style="color: #059669; text-decoration: none; margin: 0 10px;">Products</a>
-            <a href="${BASE_URL}/about" style="color: #059669; text-decoration: none; margin: 0 10px;">About Us</a>
-            <a href="${BASE_URL}/contact" style="color: #059669; text-decoration: none; margin: 0 10px;">Contact</a>
+        <div style="text-align: center; padding: 30px 20px; color: #6B7280; font-size: 14px; background-color: #F3F4F6; border-radius: 12px; margin-top: 10px;">
+          <img src="${STORE_LOGO}" alt="${STORE_NAME}" style="max-width: 120px; margin-bottom: 15px;">
+          <p style="margin-bottom: 10px; font-weight: 500;">&copy; ${new Date().getFullYear()} ${STORE_NAME}. All rights reserved.</p>
+          <p style="margin-bottom: 20px; font-style: italic; color: #059669;">Premium Millet Products for a Healthier Lifestyle</p>
+          
+          <!-- Navigation Links with improved styling -->
+          <div style="margin-bottom: 25px; display: inline-block; background-color: #FFFFFF; padding: 12px 20px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <a href="https://millik-1.onrender.com" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">Home</a>
+            <a href="https://millik-1.onrender.com/products" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">Products</a>
+            <a href="https://millik-1.onrender.com/about" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">About Us</a>
+            <a href="https://millik-1.onrender.com/contact" style="color: #059669; text-decoration: none; margin: 0 10px; font-weight: 600; transition: color 0.2s;">Contact</a>
           </div>
-          <p style="color: #9CA3AF; font-size: 12px;">This is an automated email. Please do not reply to this message.</p>
+          
+          <!-- Social Media Icons (placeholder) -->
+          <div style="margin-bottom: 20px;">
+            <span style="display: inline-block; width: 36px; height: 36px; background-color: #059669; border-radius: 50%; margin: 0 5px; text-align: center; line-height: 36px; color: white; font-weight: bold;">f</span>
+            <span style="display: inline-block; width: 36px; height: 36px; background-color: #059669; border-radius: 50%; margin: 0 5px; text-align: center; line-height: 36px; color: white; font-weight: bold;">i</span>
+            <span style="display: inline-block; width: 36px; height: 36px; background-color: #059669; border-radius: 50%; margin: 0 5px; text-align: center; line-height: 36px; color: white; font-weight: bold;">t</span>
+          </div>
+          
+          <p style="color: #9CA3AF; font-size: 12px; border-top: 1px solid #E5E7EB; padding-top: 15px;">This is an automated email. Please do not reply to this message.</p>
         </div>
       </body>
       </html>
