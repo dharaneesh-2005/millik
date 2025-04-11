@@ -1,11 +1,11 @@
-import nodemailer from 'nodemailer';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import { Order, OrderItem, Product } from '@shared/schema';
+import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
 
 // Load environment variables
 try {
-  if (fs.existsSync('.env') && !process.env.EMAIL_HOST) {
+  if (fs.existsSync('.env') && !process.env.MAILERSEND_API_KEY) {
     const envConfig = dotenv.parse(fs.readFileSync('.env'));
     for (const key in envConfig) {
       process.env[key] = envConfig[key];
@@ -17,40 +17,36 @@ try {
 }
 
 // Email configuration
-const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.mailersend.net';
-const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || '587');
-const EMAIL_USER = process.env.EMAIL_USER || 'MS_fJUavy@test-z0vklo6e2mvl7qrx.mlsender.net';
-const EMAIL_PASS = process.env.EMAIL_PASS || 'mssp.O8cbPAj.3vz9dle7qr74kj50.d4n6FCj';
-const EMAIL_FROM = process.env.EMAIL_FROM || 'orders@millikit.com';
+const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY || 'mlsn.f66807779f42f05eea17e8af2b626f6704437a763b8ebc06da23d3bf8f317225';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'skdhara2222@gmail.com';
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || 'MILLIKIT';
 const STORE_NAME = process.env.STORE_NAME || 'Millikit';
 const STORE_LOGO = process.env.STORE_LOGO || 'https://i.postimg.cc/8c7QrD35/Millikit-logo.png';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
-// Create email transporter
-const transporter = nodemailer.createTransport({
-  host: EMAIL_HOST,
-  port: EMAIL_PORT,
-  secure: EMAIL_PORT === 465,
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS,
-  },
+// Initialize MailerSend SDK
+const mailerSend = new MailerSend({
+  apiKey: MAILERSEND_API_KEY,
 });
 
 // Send email
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"${STORE_NAME}" <${EMAIL_FROM}>`,
-      to,
-      subject,
-      html,
-    });
+    const sender = new Sender(EMAIL_FROM, EMAIL_FROM_NAME);
+    const recipients = [new Recipient(to)];
+
+    const emailParams = new EmailParams()
+      .setFrom(sender)
+      .setTo(recipients)
+      .setSubject(subject)
+      .setHtml(html);
+
+    const response = await mailerSend.email.send(emailParams);
     
-    console.log('Email sent:', info.messageId);
+    console.log('Email sent successfully:', response);
     return {
       success: true,
-      messageId: info.messageId,
+      messageId: response.headers['x-message-id'] || 'unknown',
     };
   } catch (error) {
     console.error('Error sending email:', error instanceof Error ? error.message : String(error));
