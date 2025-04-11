@@ -40,8 +40,9 @@ const transporter = nodemailer.createTransport({
 // Send email
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
+    const fromName = process.env.EMAIL_FROM_NAME || 'MILLIKIT';
     const info = await transporter.sendMail({
-      from: `"${STORE_NAME}" <${EMAIL_FROM}>`,
+      from: `"${fromName}" <${EMAIL_FROM}>`,
       to,
       subject,
       html,
