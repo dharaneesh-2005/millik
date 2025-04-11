@@ -1102,7 +1102,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email,
           phone,
           shippingAddress: formattedShippingAddress,
-          notes
+          notes,
+          userId: 1 // Add default user ID (guest checkout)
         });
         
         console.log("✅ ORDER CREATED SUCCESSFULLY:", { 
@@ -1625,7 +1626,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentStatus: "pending",
           paymentId: razorpayOrder.orderId,
           transactionId: generateTransactionId(),
-          sessionId: req.headers["session-id"] as string
+          sessionId: req.headers["session-id"] as string,
+          userId: 1 // Add default user ID for guest checkouts
         });
         
         // Create order items in database
