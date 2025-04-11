@@ -463,20 +463,49 @@ export default function AdminDashboard() {
 
   const deleteProduct = async (productId: number) => {
     try {
+      // Show loading toast
+      toast({
+        title: "Deleting...",
+        description: "Deleting product, please wait",
+      });
+      
+      console.log(`Attempting to delete product with ID: ${productId}`);
+      
       const response = await fetch(`/api/admin/products/${productId}`, {
         method: "DELETE",
         headers: {
           "x-admin-key": ADMIN_KEY,
+          "Content-Type": "application/json",
+          // Add cache control headers
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache"
         },
       });
       
-      if (!response.ok) throw new Error("Failed to delete product");
+      // Log the response details for debugging
+      console.log(`Delete API response status: ${response.status}`);
+      
+      // Handle different response status codes
+      if (response.status === 204) {
+        console.log("Product deleted successfully (204 No Content)");
+      } else if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        console.log("Product deleted successfully with data:", data);
+      } else {
+        // Try to get error details from response
+        const errorData = await response.text().catch(() => "Unknown error");
+        console.error("Server error response:", errorData);
+        throw new Error(`Failed to delete product: ${response.status} ${response.statusText}`);
+      }
       
       // Update UI by removing the deleted product
       setProducts(products.filter(product => product.id !== productId));
       
       setIsDeleteDialogOpen(false);
       setSelectedProduct(null);
+      
+      // Refresh products list after deletion
+      fetchProducts();
       
       toast({
         title: "Success",
@@ -486,7 +515,7 @@ export default function AdminDashboard() {
       console.error("Error deleting product:", error);
       toast({
         title: "Error",
-        description: "Failed to delete product. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to delete product. Please try again.",
         variant: "destructive",
       });
     }
