@@ -30,7 +30,7 @@ const EMAIL_FROM = process.env.EMAIL_FROM || "orders@millikit.com";
 const STORE_NAME = process.env.STORE_NAME || "Millikit";
 const STORE_LOGO =
   process.env.STORE_LOGO ||
-  "https://i.imghippo.com/files/avks6864DoM.png";
+  "https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png";
 const BASE_URL = process.env.BASE_URL || "https://millik-1.onrender.com";
 
 // Create email transporter
@@ -132,7 +132,7 @@ export const sendOrderConfirmationEmail = async (
       <body style="font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #4B5563; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #F9FAFB;">
         <!-- Enhanced Header with logo and background -->
         <div style="text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #d1fae5;">
-          <img src="${STORE_LOGO}" alt="${STORE_NAME}" style="max-width: 180px; margin-bottom: 20px;">
+          <img src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 180px; margin-bottom: 20px;">
           <h1 style="margin: 10px 0; color: #065F46; font-weight: 700; font-size: 32px; letter-spacing: -0.5px;">Order Confirmation</h1>
           <div style="width: 80px; height: 4px; background-color: #059669; margin: 15px auto;"></div>
           <p style="margin: 15px 0 0; color: #059669; font-size: 18px; font-weight: 500;">Thank you for shopping with us!</p>
@@ -355,7 +355,7 @@ export const sendOrderConfirmationEmail = async (
         
         <!-- Footer -->
         <div style="text-align: center; padding: 30px 20px; color: #6B7280; font-size: 14px; background-color: #F3F4F6; border-radius: 12px; margin-top: 10px;">
-          <img src="${STORE_LOGO}" alt="${STORE_NAME}" style="max-width: 120px; margin-bottom: 15px;">
+          <img src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 120px; margin-bottom: 15px;">
           <p style="margin-bottom: 10px; font-weight: 500;">&copy; ${new Date().getFullYear()} ${STORE_NAME}. All rights reserved.</p>
           <p style="margin-bottom: 20px; font-style: italic; color: #059669;">Premium Millet Products for a Healthier Lifestyle</p>
           
