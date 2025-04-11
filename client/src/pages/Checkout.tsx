@@ -165,7 +165,6 @@ export default function Checkout() {
         amount: total,
         email: formData.email,
         phone: formattedPhone,
-        // Log only necessary information for debugging
       });
 
       // Prepare the items array based on whether we're in buy now mode or regular checkout
@@ -181,7 +180,7 @@ export default function Checkout() {
             metaData: item.metaData || JSON.stringify({})
           }));
 
-      // First create an order in our backend
+      // Create an order in our backend
       const createOrderResponse = await fetch('/api/orders/create', {
         method: 'POST',
         headers: {
@@ -201,76 +200,6 @@ export default function Checkout() {
           items: checkoutItems
         })
       });
-
-      // Generate an order number for our internal use
-      const mockOrderNumber = "ORD" + Date.now().toString().substring(5);
-      console.log('Generated mock order number:', mockOrderNumber);
-      
-      // Open Razorpay payment form - without an order_id (key-only mode)
-      const options = {
-        key: 'rzp_test_ICFzlzJpqAvLWl',
-        amount: Math.round(total * 100), // convert to paisa
-        currency: 'INR',
-        name: 'Millikit',
-        description: `Order #${mockOrderNumber}`,
-        // Removed order_id which was causing the error
-        prefill: {
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          contact: formData.phone
-        },
-        notes: {
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          postalCode: formData.postalCode,
-          country: formData.country,
-          orderNumber: mockOrderNumber
-        },
-        theme: {
-          color: '#4CAF50'
-        },
-        handler: async function(response: any) {
-          // Payment successful
-          console.log('Payment successful response:', response);
-          
-          try {
-            // Clear cart and redirect to success page
-            await clearCart();
-            toast({
-              title: "Payment Successful",
-              description: `Your order #${mockOrderNumber} has been placed successfully.`,
-            });
-            navigate(`/order-success?orderNumber=${mockOrderNumber}`);
-          } catch (error) {
-            console.error('Error handling payment success:', error);
-            toast({
-              title: "Error Processing Payment",
-              description: error instanceof Error ? error.message : "An error occurred",
-              variant: "destructive",
-            });
-          } finally {
-            setIsProcessing(false);
-          }
-        },
-        modal: {
-          ondismiss: function() {
-            setIsProcessing(false);
-            toast({
-              title: "Payment Cancelled",
-              description: "You have cancelled the payment. Your order has not been placed.",
-              variant: "destructive",
-            });
-          }
-        }
-      };
-      
-      if (typeof window.Razorpay === 'undefined') {
-        throw new Error('Razorpay SDK not loaded. Please refresh the page and try again.');
-      }
-      
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
       
       if (!createOrderResponse.ok) {
         const errorData = await createOrderResponse.json();
@@ -284,8 +213,12 @@ export default function Checkout() {
         throw new Error('Invalid order data received from server');
       }
       
-      // Open Razorpay payment form with our order ID
-      const options = {
+      if (typeof window.Razorpay === 'undefined') {
+        throw new Error('Razorpay SDK not loaded. Please refresh the page and try again.');
+      }
+      
+      // Create Razorpay payment options
+      let rzpOptions = {
         key: 'rzp_test_ICFzlzJpqAvLWl',
         amount: Math.round(total * 100), // convert to paisa
         currency: 'INR',
@@ -331,8 +264,6 @@ export default function Checkout() {
               throw new Error(errorData.message || 'Payment verification failed');
             }
             
-            const verifyData = await verifyResponse.json();
-            
             // If payment is successful and verified, clear session storage if in buy now mode
             if (isBuyNow) {
               sessionStorage.removeItem('buyNowItem');
@@ -369,12 +300,9 @@ export default function Checkout() {
         }
       };
       
-      if (typeof window.Razorpay === 'undefined') {
-        throw new Error('Razorpay SDK not loaded. Please refresh the page and try again.');
-      }
-      
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+      // Initialize and open Razorpay
+      let rzp = new window.Razorpay(rzpOptions);
+      rzp.open();
       
     } catch (error) {
       console.error("Error processing order:", error);
