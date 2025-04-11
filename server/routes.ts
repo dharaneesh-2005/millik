@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCartItemSchema, insertContactSchema, insertProductSchema, insertUserSchema } from "@shared/schema";
+import { insertCartItemSchema, insertContactSchema, insertProductSchema, insertUserSchema, Product } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { generateSecret, generateQrCode, verifyToken } from "./otpUtils";
@@ -1182,6 +1182,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Clear the cart
           console.log(`Clearing cart for session: ${sessionId}`);
           await storage.clearCart(sessionId);
+          
+          // Send order confirmation email for non-Razorpay payment methods
+          try {
+            console.log(`Sending order confirmation email to ${email}`);
+            
+            // Get order items for the email
+            const orderItems = await storage.getOrderItems(order.id);
+            
+            // Get products for display in the email
+            const productIds = orderItems.map(item => item.productId);
+            const products = await Promise.all(
+              productIds.map(id => storage.getProductById(id))
+            );
+            
+            // Import email module
+            const { sendOrderConfirmationEmail } = await import('./email');
+            
+            // Send the confirmation email
+            const emailResult = await sendOrderConfirmationEmail(
+              order, 
+              orderItems, 
+              products.filter(p => p !== undefined) as Product[]
+            );
+            
+            if (emailResult.success) {
+              console.log(`✅ Order confirmation email sent successfully to ${email}`);
+            } else {
+              console.error(`❌ Failed to send order confirmation email: ${emailResult.error}`);
+            }
+          } catch (emailError) {
+            console.error(`❌ Error sending order confirmation email:`, emailError);
+            // Don't fail the request if email sending fails
+          }
         }
       } catch (dbError) {
         console.error('❌ DATABASE ERROR CREATING ORDER:', dbError);
@@ -1743,6 +1776,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (order.sessionId) {
         console.log(`Clearing cart for session: ${order.sessionId}`);
         await storage.clearCart(order.sessionId);
+      }
+      
+      // Send order confirmation email
+      try {
+        console.log(`Sending order confirmation email to ${order.email}`);
+        
+        // Get order items for the email
+        const orderItems = await storage.getOrderItems(order.id);
+        
+        // Get products for display in the email
+        const productIds = orderItems.map(item => item.productId);
+        const products = await Promise.all(
+          productIds.map(id => storage.getProductById(id))
+        );
+        
+        // Import email module
+        const { sendOrderConfirmationEmail } = await import('./email');
+        
+        // Send the confirmation email
+        const emailResult = await sendOrderConfirmationEmail(updatedOrder, orderItems, products.filter(p => p !== undefined) as Product[]);
+        
+        if (emailResult.success) {
+          console.log(`✅ Order confirmation email sent successfully to ${order.email}`);
+        } else {
+          console.error(`❌ Failed to send order confirmation email: ${emailResult.error}`);
+        }
+      } catch (emailError) {
+        console.error(`❌ Error sending order confirmation email:`, emailError);
+        // Don't fail the request if email sending fails
       }
     } catch (error) {
       console.error("❌ ERROR VERIFYING PAYMENT:", error);
