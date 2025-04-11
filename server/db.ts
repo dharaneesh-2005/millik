@@ -89,6 +89,11 @@ export async function initializeDatabase(url: string) {
     
     // Create necessary tables if they don't exist
     await migrationDb.execute(`
+      -- Drop existing order tables if they exist to recreate with correct structure
+      DROP TABLE IF EXISTS order_items;
+      DROP TABLE IF EXISTS orders;
+      DROP TABLE IF EXISTS settings;
+      
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
@@ -132,7 +137,8 @@ export async function initializeDatabase(url: string) {
         session_id TEXT,
         product_id INTEGER NOT NULL REFERENCES products(id),
         quantity INTEGER NOT NULL DEFAULT 1,
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT NOW(),
+        meta_data TEXT
       );
       
       CREATE TABLE IF NOT EXISTS contacts (
@@ -143,6 +149,55 @@ export async function initializeDatabase(url: string) {
         subject TEXT NOT NULL,
         message TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        email TEXT,
+        phone TEXT,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP,
+        user_id INTEGER,
+        session_id TEXT,
+        order_number TEXT NOT NULL UNIQUE,
+        total_amount TEXT NOT NULL,
+        subtotal_amount TEXT NOT NULL,
+        tax_amount TEXT NOT NULL,
+        shipping_amount TEXT NOT NULL,
+        discount_amount TEXT DEFAULT '0',
+        payment_id TEXT,
+        payment_method TEXT NOT NULL CHECK (payment_method IN ('razorpay', 'cod', 'bank_transfer')),
+        payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'completed', 'failed')),
+        transaction_id TEXT,
+        shipping_address TEXT NOT NULL,
+        billing_address TEXT,
+        shipping_method TEXT DEFAULT 'standard',
+        notes TEXT,
+        coupon_code TEXT
+      );
+      
+      CREATE TABLE IF NOT EXISTS order_items (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        price TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        meta_data TEXT,
+        order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        subtotal TEXT NOT NULL,
+        weight TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS settings (
+        id SERIAL PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE,
+        value TEXT NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP,
+        group_name TEXT
       );
     `);
     
@@ -215,6 +270,117 @@ export async function initializeDatabase(url: string) {
       console.log(`Added ${sampleProducts.length} sample products`);
     } else {
       console.log(`Database already has ${existingProducts.length} products`);
+    }
+    
+    // Check if we need to create sample orders
+    const existingOrders = await migrationDb.execute(`SELECT COUNT(*) FROM orders`);
+    const orderCount = parseInt(existingOrders[0].count as string, 10);
+    
+    if (orderCount === 0 && existingProducts.length > 0) {
+      console.log('Creating sample orders...');
+      
+      try {
+        // Create a sample order
+        const orderSql = `
+          INSERT INTO orders (
+            email, phone, status, order_number, total_amount, 
+            subtotal_amount, tax_amount, shipping_amount, payment_method, 
+            shipping_address, transaction_id, session_id
+          ) VALUES (
+            'customer@example.com', 
+            '9876543210', 
+            'processing', 
+            'ORD-${Date.now()}', 
+            '1250.00', 
+            '1050.00', 
+            '150.00', 
+            '50.00', 
+            'razorpay', 
+            '123 Main St, Bangalore, Karnataka, India', 
+            'txn_${Date.now()}', 
+            'sess_${Date.now()}'
+          ) RETURNING id`;
+        
+        const orderResult = await migrationDb.execute(orderSql);
+        const orderId = orderResult[0].id;
+        
+        // Add order items for the sample order using existing products
+        for (let i = 0; i < Math.min(2, existingProducts.length); i++) {
+          const product = existingProducts[i];
+          const quantity = i + 1;
+          const subtotal = parseFloat(product.price as string) * quantity;
+          
+          const orderItemSql = `
+            INSERT INTO order_items (
+              name, price, product_id, quantity, 
+              order_id, subtotal, meta_data
+            ) VALUES (
+              '${product.name.replace(/'/g, "''")}', 
+              '${product.price}', 
+              ${product.id}, 
+              ${quantity}, 
+              ${orderId}, 
+              '${subtotal.toFixed(2)}',
+              '{"selectedWeight": "${product.weightOptions ? product.weightOptions[0] : "500g"}"}'
+            )`;
+          
+          await migrationDb.execute(orderItemSql);
+        }
+        
+        // Add a second order with different status
+        const orderSql2 = `
+          INSERT INTO orders (
+            email, phone, status, order_number, total_amount, 
+            subtotal_amount, tax_amount, shipping_amount, payment_method, 
+            shipping_address, transaction_id, session_id
+          ) VALUES (
+            'another@example.com', 
+            '8765432109', 
+            'pending', 
+            'ORD-${Date.now() + 1}', 
+            '750.00', 
+            '650.00', 
+            '70.00', 
+            '30.00', 
+            'razorpay', 
+            '456 Park Ave, Chennai, Tamil Nadu, India', 
+            'txn_${Date.now() + 1}', 
+            'sess_${Date.now() + 1}'
+          ) RETURNING id`;
+        
+        const orderResult2 = await migrationDb.execute(orderSql2);
+        const orderId2 = orderResult2[0].id;
+        
+        // Add order items for the second order
+        if (existingProducts.length > 0) {
+          const product = existingProducts[0];
+          const quantity = 3;
+          const subtotal = parseFloat(product.price as string) * quantity;
+          
+          const orderItemSql = `
+            INSERT INTO order_items (
+              name, price, product_id, quantity, 
+              order_id, subtotal, meta_data
+            ) VALUES (
+              '${product.name.replace(/'/g, "''")}', 
+              '${product.price}', 
+              ${product.id}, 
+              ${quantity}, 
+              ${orderId2}, 
+              '${subtotal.toFixed(2)}',
+              '{"selectedWeight": "${product.weightOptions ? product.weightOptions[0] : "500g"}"}'
+            )`;
+          
+          await migrationDb.execute(orderItemSql);
+        }
+        
+        console.log('Sample orders created successfully');
+      } catch (error) {
+        console.error('Error creating sample orders:', error);
+        // Continue even if sample orders fail to be created
+      }
+    } else if (orderCount > 0) {
+      console.log(`Database already has ${orderCount} orders`);
     }
     
     // Close the migration client

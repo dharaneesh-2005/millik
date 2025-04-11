@@ -10,14 +10,14 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center mb-4">
+            <div className="flex justify-center mb-6">
               <img 
                 src={logoPath} 
                 alt="Millikit Logo" 
-                className="h-16 w-auto mr-2 bg-white/10 rounded-full p-1" 
+                className="h-24 md:h-32 w-auto mr-2 bg-white p-2 rounded-full shadow-lg" 
               />
             </div>
-            <p className="text-gray-300">{t('footer.tagline')}</p>
+            <p className="text-gray-300 text-center">{t('footer.tagline')}</p>
           </div>
           
           <div>

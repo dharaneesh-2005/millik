@@ -1,0 +1,21 @@
+{
+  "name": "Millikit - Premium Millet Store",
+  "short_name": "Millikit",
+  "description": "Shop premium quality millets and millet-based products",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#4CAF50",
+  "icons": [
+    {
+      "src": "/favicon/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+} 

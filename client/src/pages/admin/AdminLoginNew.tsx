@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -35,6 +35,20 @@ export default function AdminLogin() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   
+  // Check if already authenticated
+  useEffect(() => {
+    const adminSession = sessionStorage.getItem("adminSessionId");
+    const adminAuthenticated = sessionStorage.getItem("adminAuthenticated") === "true";
+    
+    console.log("AdminLogin auth check:", { adminSession, adminAuthenticated });
+    
+    // If already authenticated, redirect to dashboard
+    if (adminSession && adminAuthenticated) {
+      console.log("Already authenticated, redirecting to dashboard");
+      navigate("/admin");
+    }
+  }, [navigate]);
+  
   // Login form with default username
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -50,6 +64,8 @@ export default function AdminLogin() {
     setIsLoggingIn(true);
     
     try {
+      console.log("Attempting login with:", data.username);
+      
       // Use fetch directly with proper headers
       const response = await fetch("/api/admin/login", {
         method: "POST",
@@ -60,19 +76,35 @@ export default function AdminLogin() {
       });
       
       const result = await response.json();
+      console.log("Login response:", result);
       
       if (result.success) {
-        // Store session ID in sessionStorage
+        console.log("Login successful, setting session data");
+        
+        // Clear any existing session data first
+        sessionStorage.removeItem("adminSessionId");
+        sessionStorage.removeItem("adminAuthenticated");
+        
+        // Now set fresh session data
         sessionStorage.setItem("adminSessionId", result.sessionId);
         sessionStorage.setItem("adminAuthenticated", "true");
+        
+        // Verify data was set correctly
+        console.log("Session data set:", {
+          sessionId: sessionStorage.getItem("adminSessionId"),
+          authenticated: sessionStorage.getItem("adminAuthenticated")
+        });
         
         toast({
           title: "Login successful",
           description: "Welcome to admin dashboard",
         });
         
-        // Use window.location for a more reliable redirect
-        window.location.href = "/admin";
+        // Add a small delay to ensure sessionStorage is set before redirect
+        setTimeout(() => {
+          console.log("Redirecting to admin dashboard");
+          window.location.href = "/admin"; // Use direct navigation for more reliability
+        }, 500);
       } else {
         throw new Error(result.message || "Invalid username or password");
       }

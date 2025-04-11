@@ -42,24 +42,25 @@ export default function Header() {
 
   return (
     <motion.header 
-      className={`fixed w-full top-0 z-50 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-yellow-400'}`}
+      className={`fixed w-full top-0 z-50 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-yellow-200'}`}
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <nav className="container mx-auto px-4 md:px-12 lg:px-16 py-4 md:py-6">
-        <div className="flex items-center justify-between">
+      <nav className="container mx-auto px-4 md:px-12 lg:px-16 py-1 md:py-2">
+        <div className="flex items-center justify-between gap-4">
           {/* Logo */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
+            className="py-0 flex-shrink-0"
           >
             <Link href="/" className="flex items-center">
               <motion.img 
                 src={logoPath} 
                 alt="Millikit Logo" 
-                className="h-12 md:h-18 w-auto" 
+                className="h-16 md:h-20 w-auto py-1" 
                 whileHover={{ rotate: [0, -5, 5, -5, 0], transition: { duration: 0.5 } }}
               />
             </Link>
@@ -76,7 +77,7 @@ export default function Header() {
               >
                 <Link 
                   href={path} 
-                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors text-xl`}
+                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors text-lg py-1`}
                 >
                   {path === '/' ? t('home') : path === '/products' ? t('products') : t('contact')}
                 </Link>
@@ -85,7 +86,7 @@ export default function Header() {
           </div>
           
           {/* Action icons */}
-          <div className="flex items-center gap-3 md:gap-6">
+          <div className="flex items-center gap-3 md:gap-4">
             {/* Language Selector for Desktop - only visible on desktop */}
             <div className="hidden md:block">
               <LanguageSelector />
@@ -97,6 +98,7 @@ export default function Header() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
+              className="py-1"
             >
               <Link href="/admin/login" className="text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-user-shield text-2xl"></i>
@@ -109,6 +111,7 @@ export default function Header() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
+              className="py-1"
             >
               <Link href="/cart" className="relative text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-shopping-cart text-2xl"></i>
@@ -134,7 +137,7 @@ export default function Header() {
             
             {/* Mobile menu toggle */}
             <motion.button 
-              className="md:hidden text-gray-700"
+              className="md:hidden text-gray-700 py-1"
               onClick={toggleMobileMenu}
               aria-label="Toggle mobile menu"
               initial={{ opacity: 0 }}

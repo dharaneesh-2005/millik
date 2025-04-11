@@ -87,12 +87,21 @@ app.use((req, res, next) => {
   }
 
   // Configure server for both local development and Vercel deployment
-  const port = process.env.PORT || 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  const port = process.env.PORT || 3000;
+  
+  // Function to try binding to a port, and fallback to another if it fails
+  const startServer = (portToUse: number, maxRetries = 3) => {
+    server.listen(portToUse, () => {
+      log(`serving on port ${portToUse}`);
+    }).on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE' && maxRetries > 0) {
+        log(`Port ${portToUse} is in use, trying ${portToUse + 1}...`);
+        startServer(portToUse + 1, maxRetries - 1);
+      } else {
+        throw err;
+      }
+    });
+  };
+  
+  startServer(Number(port));
 })();

@@ -6,6 +6,8 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { generateSecret, generateQrCode, verifyToken } from "./otpUtils";
 import { setupAuth } from "./auth";
+import { createRazorpayOrder, verifyPaymentSignature, generateOrderNumber, generateTransactionId } from './razorpay';
+import { sql } from 'drizzle-orm';
 
 // Session storage for admin authentication
 interface AdminSession {
@@ -168,6 +170,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if a session has already reviewed a product
+  app.get("/api/products/:id/session-review", async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const sessionId = req.query.sessionId as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+      
+      const product = await storage.getProductById(productId);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      
+      // Parse reviews
+      if (!product.reviews) {
+        return res.json({ hasReviewed: false });
+      }
+      
+      try {
+        const reviews = JSON.parse(product.reviews);
+        if (!Array.isArray(reviews)) {
+          return res.json({ hasReviewed: false });
+        }
+        
+        // Check if session has already reviewed
+        const existingReview = reviews.find((r: any) => r.sessionId === sessionId);
+        
+        if (existingReview) {
+          return res.json({ 
+            hasReviewed: true, 
+            review: existingReview 
+          });
+        } else {
+          return res.json({ hasReviewed: false });
+        }
+      } catch (error) {
+        console.error("Error parsing reviews:", error);
+        return res.json({ hasReviewed: false });
+      }
+    } catch (error) {
+      console.error("Error checking session review:", error);
+      res.status(500).json({ error: "Failed to check review status" });
+    }
+  });
+
   // Cart management
   app.get("/api/cart", async (req, res) => {
     try {
@@ -236,30 +285,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Instead of just checking by product ID, now we need to also check the metaData
       // to differentiate between different weight options of the same product
+      let existingItemWithSameWeight = null;
       
       try {
-        // Try to use the new method that handles metaData properly
-        const existingItemWithSameWeight = await storage.getCartItemWithProduct(
+        // Try to use the method that handles metaData properly
+        existingItemWithSameWeight = await storage.getCartItemWithProduct(
           sessionId, 
           validatedData.productId,
-          validatedData.metaData || null
+          validatedData.metaData || undefined
         );
-        
-        if (existingItemWithSameWeight) {
-          // Update quantity if item with same weight already exists
-          console.log(`Found existing cart item with same weight, updating quantity from ${existingItemWithSameWeight.quantity} to ${existingItemWithSameWeight.quantity + (validatedData.quantity || 1)}`);
-          const updatedItem = await storage.updateCartItem(
-            existingItemWithSameWeight.id,
-            existingItemWithSameWeight.quantity + (validatedData.quantity || 1)
-          );
-          return res.json(updatedItem);
-        }
       } catch (error) {
         console.error("Error finding cart item with same weight:", error);
         
         // Fallback to old method if the new one fails
         const existingItems = await storage.getCartItems(sessionId);
-        let existingItemWithSameWeight = null;
         
         for (const item of existingItems) {
           if (item.productId === validatedData.productId) {
@@ -275,15 +314,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
-        if (existingItemWithSameWeight) {
-          // Update quantity if item with same weight already exists
-          const updatedItem = await storage.updateCartItem(
-            existingItemWithSameWeight.id,
-            existingItemWithSameWeight.quantity + (validatedData.quantity || 1)
-          );
-          return res.json(updatedItem);
-        }
+      }
+      
+      // If we found an existing item with the same weight, update its quantity
+      if (existingItemWithSameWeight) {
+        console.log(`Found existing cart item with same weight, updating quantity from ${existingItemWithSameWeight.quantity} to ${existingItemWithSameWeight.quantity + (validatedData.quantity || 1)}`);
+        const updatedItem = await storage.updateCartItem(
+          existingItemWithSameWeight.id,
+          existingItemWithSameWeight.quantity + (validatedData.quantity || 1)
+        );
+        return res.json(updatedItem);
       }
       
       // If no matching item (same product + same weight) found, add as new item
@@ -791,10 +831,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
+      // The product deletion now handles cart items in the storage implementation
       await storage.deleteProduct(id);
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ message: "Error deleting product" });
+      console.error("Error deleting product:", error);
+      // Include more detailed error information in the response
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Error deleting product", 
+        details: errorMessage,
+        productId: req.params.id
+      });
     }
   });
   
@@ -849,6 +897,920 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(contacts);
     } catch (error) {
       res.status(500).json({ message: "Error fetching contacts" });
+    }
+  });
+
+  // Update a product
+  app.patch("/api/products/:id", async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const product = await storage.getProductById(productId);
+      
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      
+      // Extract fields from request body
+      const updateData = req.body;
+      console.log(`Updating product ${productId} with data:`, updateData);
+      
+      // Special handling for reviews to avoid double-JSON stringification
+      if (updateData.reviews) {
+        try {
+          // Check if the reviews field is already a JSON string
+          JSON.parse(updateData.reviews);
+          console.log("Reviews is already a valid JSON string");
+        } catch (e) {
+          // If parsing fails, it means we need to stringify the reviews
+          console.log("Reviews is not a JSON string, stringifying it");
+          updateData.reviews = JSON.stringify(updateData.reviews);
+        }
+      }
+      
+      // Update the product
+      await storage.updateProduct(productId, updateData);
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ error: "Failed to update product" });
+    }
+  });
+
+  // Orders API routes
+  app.post("/api/checkout", async (req, res) => {
+    try {
+      console.log("⭐⭐⭐ CHECKOUT REQUEST RECEIVED ⭐⭐⭐");
+      const { 
+        email, 
+        phone, 
+        shippingAddress, 
+        shippingCity, 
+        shippingState, 
+        shippingZip, 
+        shippingCountry,
+        paymentMethod,
+        cartItems: items,
+        notes
+      } = req.body;
+      
+      console.log("Checkout details:", { 
+        email, 
+        phone, 
+        shippingAddress: shippingAddress?.substring(0, 20) + "...", 
+        paymentMethod,
+        itemCount: items?.length 
+      });
+      
+      // Validate required fields
+      if (!email || !phone || !shippingAddress || !shippingCity || !shippingState || !shippingZip || !paymentMethod || !items) {
+        console.log("❌ Missing required checkout fields:", { email, phone, shippingAddress, paymentMethod, items: items?.length });
+        return res.status(400).json({ 
+          success: false,
+          message: "Missing required fields" 
+        });
+      }
+      
+      let sessionId = req.headers["session-id"] as string;
+      if (!sessionId) {
+        console.log("❌ Missing session ID in checkout");
+        return res.status(400).json({ 
+          success: false,
+          message: "Session ID is required" 
+        });
+      }
+      
+      console.log("Session ID for checkout:", sessionId);
+      
+      // Get cart items and calculate totals
+      const cartItems = await storage.getCartItems(sessionId);
+      if (!cartItems || cartItems.length === 0) {
+        console.log("❌ Empty cart at checkout for session:", sessionId);
+        return res.status(400).json({ 
+          success: false,
+          message: "Cart is empty" 
+        });
+      }
+      
+      console.log(`Found ${cartItems.length} items in cart for checkout`);
+      
+      // Get product details for each cart item
+      const orderItems = await Promise.all(
+        cartItems.map(async (item) => {
+          const product = await storage.getProductById(item.productId);
+          if (!product) {
+            throw new Error(`Product ${item.productId} not found`);
+          }
+          
+          // Extract weight from metaData if available
+          let weight = '';
+          let priceToUse = product.price;
+          
+          if (item.metaData) {
+            try {
+              const metaData = JSON.parse(item.metaData);
+              weight = metaData.weight || '';
+              
+              // If we have weight-specific pricing, use that
+              if (weight && product.weightPrices) {
+                const weightPrices = JSON.parse(product.weightPrices);
+                if (weightPrices[weight] && weightPrices[weight].price) {
+                  priceToUse = weightPrices[weight].price;
+                }
+              }
+            } catch (e) {
+              console.warn('Error parsing cart item metaData:', e);
+            }
+          }
+          
+          // Calculate subtotal (price * quantity)
+          const price = parseFloat(priceToUse);
+          const subtotal = price * item.quantity;
+          
+          return {
+            productId: item.productId,
+            name: product.name,
+            price: price.toString(),
+            quantity: item.quantity,
+            subtotal: subtotal.toString(),
+            weight,
+            metaData: item.metaData
+          };
+        })
+      );
+      
+      // Calculate order totals
+      const subtotalAmount = orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+      
+      // Get shipping settings
+      const shippingRateRaw = await storage.getSetting('shipping_rate') || '50';
+      const freeShippingThresholdRaw = await storage.getSetting('free_shipping_threshold') || '1000';
+      const taxRateRaw = await storage.getSetting('tax_rate') || '5';
+      
+      // Safe parsing of setting values
+      const parseSettingValue = (setting: any, defaultValue: string): number => {
+        if (typeof setting === 'string') {
+          return parseFloat(setting);
+        }
+        if (setting && typeof setting === 'object' && 'value' in setting) {
+          return parseFloat(setting.value);
+        }
+        return parseFloat(defaultValue);
+      };
+      
+      const shippingRate = parseSettingValue(shippingRateRaw, '50');
+      const freeShippingThreshold = parseSettingValue(freeShippingThresholdRaw, '1000');
+      const taxRate = parseSettingValue(taxRateRaw, '5');
+      
+      // Calculate shipping amount
+      const shippingAmount = subtotalAmount >= freeShippingThreshold ? 0 : shippingRate;
+      
+      // Calculate tax amount
+      const taxAmount = (subtotalAmount * taxRate) / 100;
+      
+      // Calculate total amount
+      const totalAmount = subtotalAmount + shippingAmount + taxAmount;
+      
+      console.log("Order calculation:", {
+        subtotal: subtotalAmount,
+        shipping: shippingAmount,
+        tax: taxAmount,
+        total: totalAmount
+      });
+      
+      // Generate order number
+      const { generateOrderNumber } = await import('./phonepe');
+      const orderNumber = generateOrderNumber();
+      console.log("Generated order number:", orderNumber);
+      
+      // Prepare the shipping address properly
+      const formattedShippingAddress = `${shippingAddress}, ${shippingCity}, ${shippingState}, ${shippingZip}, ${shippingCountry || 'India'}`;
+      
+      // Create order - THIS IS THE CRITICAL STEP
+      console.log("⏳ CREATING ORDER IN DATABASE");
+      try {
+        const order = await storage.createOrder({
+          sessionId,
+          orderNumber,
+          status: 'pending',
+          totalAmount: totalAmount.toString(),
+          subtotalAmount: subtotalAmount.toString(),
+          taxAmount: taxAmount.toString(),
+          shippingAmount: shippingAmount.toString(),
+          discountAmount: '0',
+          paymentMethod,
+          paymentStatus: 'pending',
+          email,
+          phone,
+          shippingAddress: formattedShippingAddress,
+          notes
+        });
+        
+        console.log("✅ ORDER CREATED SUCCESSFULLY:", { 
+          id: order.id, 
+          orderNumber: order.orderNumber,
+          status: order.status
+        });
+        
+        // Create order items
+        console.log("⏳ CREATING ORDER ITEMS");
+        const orderItemsResults = await Promise.all(
+          orderItems.map(item => storage.createOrderItem({
+            orderId: order.id,
+            productId: item.productId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+            weight: item.weight,
+            metaData: item.metaData
+          }))
+        );
+        
+        console.log(`✅ ${orderItemsResults.length} ORDER ITEMS CREATED`);
+        
+        // Immediately verify order was created
+        const verifyOrder = await storage.getOrderById(order.id);
+        console.log("Order verification check:", verifyOrder ? "Found in database" : "NOT FOUND IN DATABASE");
+        
+        // If payment method is PhonePe, create a payment request
+        if (paymentMethod === 'phonepay') {
+          const { createPaymentRequest } = await import('./phonepe');
+          const callbackUrl = `${req.protocol}://${req.get('host')}/api/payment/callback`;
+          
+          const paymentRequest = await createPaymentRequest(
+            totalAmount,
+            orderNumber,
+            email,
+            phone,
+            callbackUrl
+          );
+          
+          if (paymentRequest.success) {
+            // Update order with transaction ID
+            await storage.updateOrder(order.id, {
+              paymentId: paymentRequest.transactionId
+            });
+            
+            res.status(200).json({
+              success: true,
+              order,
+              redirectUrl: paymentRequest.paymentUrl,
+              paymentId: paymentRequest.transactionId
+            });
+          } else {
+            res.status(400).json({
+              success: false,
+              message: paymentRequest.error
+            });
+          }
+        } else {
+          // For COD or other payment methods, update the order status directly
+          console.log(`Updating order ${order.id} to 'processing' status (${paymentMethod} payment)`);
+          await storage.updateOrder(order.id, {
+            status: 'processing',
+            paymentStatus: paymentMethod === 'cod' ? 'pending' : 'completed'
+          });
+          
+          // Return the order with success
+          res.status(200).json({
+            success: true,
+            order,
+            orderNumber: order.orderNumber
+          });
+          
+          // Clear the cart
+          console.log(`Clearing cart for session: ${sessionId}`);
+          await storage.clearCart(sessionId);
+        }
+      } catch (dbError) {
+        console.error('❌ DATABASE ERROR CREATING ORDER:', dbError);
+        throw dbError; // Rethrow to be caught by the outer catch block
+      }
+    } catch (error) {
+      console.error('❌ ERROR DURING CHECKOUT:', error);
+      res.status(500).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : 'An error occurred during checkout',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Payment callback route
+  app.get("/api/payment/callback", async (req, res) => {
+    try {
+      console.log("⭐⭐⭐ PAYMENT CALLBACK RECEIVED ⭐⭐⭐");
+      const { transactionId } = req.query;
+      console.log(`Payment callback details: Transaction ID ${transactionId}`);
+      
+      if (!transactionId) {
+        console.error('❌ Payment callback missing transactionId');
+        return res.status(400).redirect('/order-failed?reason=missing-transaction-id');
+      }
+      
+      const { checkPaymentStatus } = await import('./phonepe');
+      console.log(`Checking payment status for transaction: ${transactionId}`);
+      const paymentStatus = await checkPaymentStatus(transactionId as string);
+      console.log(`Payment status response:`, JSON.stringify(paymentStatus));
+      
+      console.log(`Looking for order with transaction ID: ${transactionId}`);
+      const order = await storage.getOrderByPaymentId(transactionId as string);
+      
+      if (order) {
+        console.log(`Found order for transaction ${transactionId}:`, {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          currentStatus: order.status,
+          currentPaymentStatus: order.paymentStatus
+        });
+        
+        const status = paymentStatus.status === 'PAYMENT_SUCCESS' ? 'processing' :
+                      paymentStatus.status === 'PAYMENT_ERROR' ? 'failed' : 'pending';
+
+        const paymentStatusText = paymentStatus.status === 'PAYMENT_SUCCESS' ? 'completed' :
+                                  paymentStatus.status === 'PAYMENT_ERROR' ? 'failed' : 'pending';
+        
+        console.log(`Updating order ${order.id} status to: ${status}, payment status to: ${paymentStatusText}`);
+        try {
+          await storage.updateOrder(order.id, {
+            status,
+            paymentStatus: paymentStatusText,
+            updatedAt: new Date()
+          });
+          console.log(`Successfully updated order ${order.id} status`);
+          
+          // Verify the update worked
+          const updatedOrder = await storage.getOrderById(order.id);
+          console.log(`Verified updated order status:`, {
+            orderId: updatedOrder?.id,
+            status: updatedOrder?.status,
+            paymentStatus: updatedOrder?.paymentStatus
+          });
+          
+          // Check if updated correctly
+          if (!updatedOrder || updatedOrder.status !== status) {
+            console.error(`❌ Order update verification failed for order ${order.id}`);
+            console.log(`Expected status: ${status}, Actual status: ${updatedOrder?.status}`);
+          }
+        } catch (updateError) {
+          console.error(`❌ Error updating order ${order.id}:`, updateError);
+        }
+        
+        if (status === 'processing') {
+          // Clear the cart if payment successful 
+          console.log(`Processing successful order ${order.id}, clearing cart: ${order.sessionId}`);
+          const orderItems = await storage.getOrderItems(order.id);
+          console.log(`Order ${order.id} has ${orderItems.length} items`);
+          
+          try {
+            if (order.sessionId) {
+              await storage.clearCart(order.sessionId);
+              console.log(`Successfully cleared cart for session: ${order.sessionId}`);
+            } else {
+              console.warn(`Order ${order.id} has no session ID, skipping cart cleanup`);
+            }
+          } catch (cartError) {
+            console.error(`❌ Error clearing cart for order ${order.id}:`, cartError);
+          }
+          
+          return res.redirect(`/order-success?orderId=${order.id}`);
+        } else {
+          console.log(`Order ${order.id} payment failed, redirecting to failure page`);
+          return res.redirect(`/order-failed?orderId=${order.id}`);
+        }
+      } else {
+        console.error(`❌ No order found for transaction ID: ${transactionId}`);
+        
+        // Log information about all orders for debugging
+        const allOrders = await storage.getOrders();
+        console.log(`Total orders in database: ${allOrders.length}`);
+        
+        // No order found, don't try to update anything
+        return res.redirect('/order-failed?reason=order-not-found');
+      }
+    } catch (error) {
+      console.error('❌ ERROR DURING PAYMENT CALLBACK:', error);
+      res.status(500).redirect('/order-failed?reason=server-error');
+    } finally {
+      // Log callback completion
+      console.log("Payment callback processing completed");
+    }
+  });
+
+  // Get order by ID
+  app.get("/api/orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      
+      const order = await storage.getOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Get order items
+      const orderItems = await storage.getOrderItems(id);
+      
+      res.json({ order, orderItems });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching order" });
+    }
+  });
+
+  // Get orders for session
+  app.get("/api/orders", async (req, res) => {
+    try {
+      const sessionId = req.headers["session-id"] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+      
+      const orders = await storage.getOrdersBySessionId(sessionId);
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching orders" });
+    }
+  });
+
+  // Get orders by user email
+  app.get("/api/orders/email/:email", async (req, res) => {
+    try {
+      const { email } = req.params;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const orders = await storage.getOrdersByEmail(email);
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching orders" });
+    }
+  });
+
+  // Admin order management routes
+  app.get("/api/admin/orders", isAdmin, async (req, res) => {
+    try {
+      const orders = await storage.getOrders();
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching orders" });
+    }
+  });
+
+  // Diagnostic endpoint for checking orders and database connection
+  app.get("/api/admin/diagnostics/orders", isAdmin, async (req, res) => {
+    try {
+      console.log("Running orders diagnostic check");
+      
+      // Get database connection info from storage module
+      // @ts-ignore - Accessing private property for diagnostic purposes
+      const connectionString = storage.connectionString || "Not available";
+      const maskedConnectionString = connectionString.includes('@') ? 
+        `***@${connectionString.split('@')[1]}` : '***masked***';
+      
+      // Check if PostgreSQL storage implementation is active
+      const isPostgreSQLStorage = storage.constructor.name === 'PostgreSQLStorage';
+      
+      // Try direct SQL query using Drizzle's sql template strings
+      let rawOrdersResult = null;
+      let rawCountResult = null;
+      let error: Error | null = null;
+      
+      try {
+        if (isPostgreSQLStorage) {
+          // @ts-ignore - Accessing private property for diagnostic purposes
+          const db = storage.db;
+          
+          if (db) {
+            // Try direct SQL query
+            try {
+              rawOrdersResult = await db.execute(sql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 10;`);
+              console.log("Successfully executed orders SQL query");
+            } catch (err) {
+              console.error("Error executing orders SQL query:", err);
+            }
+            
+            try {
+              rawCountResult = await db.execute(sql`SELECT COUNT(*) FROM orders;`);
+              console.log("Successfully executed count SQL query");
+            } catch (err) {
+              console.error("Error executing count SQL query:", err);
+            }
+          }
+        }
+      } catch (sqlError) {
+        error = sqlError as Error;
+        console.error("Error executing raw SQL queries:", sqlError);
+      }
+      
+      // Get orders through the normal API
+      const orders = await storage.getOrders();
+      
+      // Safe conversion of raw SQL results to avoid HTML escaping issues
+      const safeFirstFewOrders = [];
+      if (rawOrdersResult && Array.isArray(rawOrdersResult) && rawOrdersResult.length > 0) {
+        try {
+          for (let i = 0; i < Math.min(3, rawOrdersResult.length); i++) {
+            const order = rawOrdersResult[i];
+            safeFirstFewOrders.push({
+              id: order.id?.toString() || 'unknown',
+              order_number: order.order_number?.toString() || 'unknown',
+              status: order.status?.toString() || 'unknown',
+              created_at: order.created_at?.toString() || 'unknown'
+            });
+          }
+        } catch (parseError) {
+          console.error("Error parsing raw order results:", parseError);
+        }
+      }
+      
+      // Build a safe response object with properly formatted values
+      const diagnosticResponse = {
+        timestamp: new Date().toISOString(),
+        normalApiOrdersCount: orders.length,
+        normalApiFirstOrder: orders.length > 0 ? {
+          id: orders[0].id,
+          orderNumber: orders[0].orderNumber,
+          status: orders[0].status,
+          createdAt: orders[0].createdAt ? orders[0].createdAt.toISOString() : null,
+        } : null,
+        databaseInfo: {
+          storageImplementation: storage.constructor.name,
+          isPostgreSQLActive: isPostgreSQLStorage,
+          connectionString: maskedConnectionString,
+        },
+        rawSqlResults: {
+          ordersCount: rawCountResult && rawCountResult[0] ? rawCountResult[0].count : 'error',
+          firstFewOrders: safeFirstFewOrders,
+          error: error ? {
+            message: error.message,
+            name: error.name,
+            stack: error.stack?.split('\n') || [],
+          } : null
+        },
+        environmentInfo: {
+          nodeEnv: process.env.NODE_ENV || 'not set',
+          databaseUrlDefined: !!process.env.DATABASE_URL,
+          databaseUrlLength: process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0
+        }
+      };
+      
+      // Ensure the response is properly serialized JSON
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify(diagnosticResponse));
+    } catch (error) {
+      console.error("Error in diagnostics endpoint:", error);
+      // Send a properly formatted error response
+      res.status(500).json({ 
+        success: false, 
+        message: "Error running diagnostics", 
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  app.get("/api/admin/orders/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      
+      const order = await storage.getOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Get order items
+      const orderItems = await storage.getOrderItems(id);
+      
+      res.json({ order, orderItems });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching order" });
+    }
+  });
+
+  app.patch("/api/admin/orders/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      
+      const order = await storage.getOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      await storage.updateOrder(id, req.body);
+      
+      // Get updated order
+      const updatedOrder = await storage.getOrderById(id);
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating order" });
+    }
+  });
+
+  // Settings management routes
+  app.get("/api/admin/settings", isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching settings" });
+    }
+  });
+
+  app.get("/api/admin/settings/:key", isAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const setting = await storage.getSetting(key);
+      
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      
+      res.json({ key, value: setting });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching setting" });
+    }
+  });
+
+  app.put("/api/admin/settings/:key", isAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const { value, description, group } = req.body;
+      
+      if (!value) {
+        return res.status(400).json({ message: "Value is required" });
+      }
+      
+      // Check if setting exists
+      const existingSetting = await storage.getSetting(key);
+      
+      if (existingSetting) {
+        // Update existing setting
+        await storage.updateSetting(key, { value, description, group });
+      } else {
+        // Create new setting
+        await storage.createSetting({ key, value, description, group });
+      }
+      
+      res.status(200).json({ key, value });
+    } catch (error) {
+      res.status(500).json({ message: "Error updating setting" });
+    }
+  });
+
+  // Razorpay integration endpoints
+  
+  // Create order with Razorpay
+  app.post("/api/orders/create", async (req, res) => {
+    try {
+      const { 
+        amount, name, email, phone, address, city, state, postalCode, 
+        country, items 
+      } = req.body;
+      
+      if (!amount || !items || !email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Amount, items, and email are required" 
+        });
+      }
+      
+      console.log('Creating order with data:', { amount, email, phone, items });
+      
+      // Generate a unique order number
+      const orderNumber = generateOrderNumber();
+      
+      // Create Razorpay order
+      const razorpayOrder = await createRazorpayOrder(parseFloat(amount), orderNumber);
+      
+      if (!razorpayOrder.success) {
+        console.error('Failed to create Razorpay order:', razorpayOrder.error);
+        return res.status(500).json({ 
+          success: false, 
+          message: razorpayOrder.error || "Failed to create Razorpay order" 
+        });
+      }
+      
+      // Save order in our database with initial pending status
+      const shippingAddress = `${address}, ${city}, ${state}, ${postalCode}, ${country}`;
+      
+      // Calculate tax and shipping
+      const subtotalAmount = (amount * 0.85).toFixed(2);
+      const taxAmount = (amount * 0.10).toFixed(2);
+      const shippingAmount = (amount * 0.05).toFixed(2);
+      
+      try {
+        // Create order in database
+        const newOrder = await storage.createOrder({
+          orderNumber,
+          email,
+          phone,
+          totalAmount: amount.toString(),
+          subtotalAmount,
+          taxAmount,
+          shippingAmount,
+          paymentMethod: "razorpay",
+          shippingAddress,
+          paymentStatus: "pending",
+          paymentId: razorpayOrder.orderId,
+          transactionId: generateTransactionId(),
+          sessionId: req.headers["session-id"] as string
+        });
+        
+        // Create order items in database
+        for (const item of items) {
+          const product = await storage.getProductById(item.productId);
+          if (product) {
+            await storage.createOrderItem({
+              orderId: newOrder.id,
+              productId: item.productId,
+              name: product.name,
+              price: product.price,
+              quantity: item.quantity,
+              subtotal: (parseFloat(product.price) * item.quantity).toString(),
+              metaData: item.metaData
+            });
+          }
+        }
+        
+        res.status(200).json({
+          success: true,
+          orderId: razorpayOrder.orderId,
+          orderNumber,
+          amount: razorpayOrder.amount
+        });
+      } catch (dbError) {
+        console.error('Database error creating order:', dbError);
+        res.status(500).json({ 
+          success: false, 
+          message: "Database error creating order" 
+        });
+      }
+    } catch (error) {
+      console.error("Error creating order:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to create order" 
+      });
+    }
+  });
+  
+  // Verify Razorpay payment
+  app.post("/api/orders/verify-payment", async (req, res) => {
+    try {
+      console.log("⭐⭐⭐ PAYMENT VERIFICATION REQUEST ⭐⭐⭐");
+      const { orderId, paymentId, signature } = req.body;
+      
+      console.log("Payment verification details:", { orderId, paymentId, signatureProvided: !!signature });
+      
+      if (!orderId || !paymentId || !signature) {
+        console.log("❌ Missing required payment verification fields");
+        return res.status(400).json({ 
+          success: false, 
+          message: "Order ID, Payment ID, and signature are required" 
+        });
+      }
+      
+      // Verify signature
+      console.log("Verifying payment signature...");
+      const isValid = verifyPaymentSignature(orderId, paymentId, signature);
+      
+      if (!isValid.success) {
+        console.log("❌ Invalid payment signature:", isValid.message);
+        return res.status(400).json({ 
+          success: false, 
+          message: isValid.message || "Invalid payment signature" 
+        });
+      }
+      
+      // Find the order in our database using the Razorpay orderId
+      console.log(`Looking for order with Razorpay ID: ${orderId}`);
+      const order = await storage.getOrderByPaymentId(orderId);
+      
+      if (!order) {
+        console.error(`❌ No order found with Razorpay ID: ${orderId}`);
+        
+        // Try to find orders with partial matching IDs for debugging
+        const allOrders = await storage.getOrders();
+        console.log(`Total orders in database: ${allOrders.length}`);
+        
+        return res.status(404).json({ 
+          success: false, 
+          message: "No matching order found" 
+        });
+      }
+      
+      console.log(`Found order #${order.id} (${order.orderNumber}) with status: ${order.status}`);
+      
+      // Update order status
+      console.log(`Updating order ${order.id} to 'processing' status (Razorpay payment)`);
+      const updatedOrder = await storage.updateOrder(order.id, {
+        paymentStatus: "completed",
+        status: "processing",
+        paymentId: paymentId, // Update with the actual payment ID from Razorpay
+        updatedAt: new Date()
+      });
+      
+      // Verify the update worked
+      const verifiedOrder = await storage.getOrderById(order.id);
+      console.log(`Verified order status update:`, {
+        id: verifiedOrder?.id,
+        status: verifiedOrder?.status,
+        paymentStatus: verifiedOrder?.paymentStatus
+      });
+      
+      // Return success response
+      res.status(200).json({
+        success: true,
+        orderNumber: updatedOrder.orderNumber,
+        message: "Payment verified successfully"
+      });
+      
+      // Clear the cart
+      if (order.sessionId) {
+        console.log(`Clearing cart for session: ${order.sessionId}`);
+        await storage.clearCart(order.sessionId);
+      }
+    } catch (error) {
+      console.error("❌ ERROR VERIFYING PAYMENT:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to verify payment",
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Simple diagnostic endpoint without complex data transformations
+  app.get("/api/admin/diagnostics/simple", isAdmin, async (req, res) => {
+    try {
+      // Define interface for the results
+      interface DiagnosticResults {
+        timestamp: string;
+        database: {
+          type: string;
+          connectionActive: boolean;
+        };
+        orders: {
+          count: number;
+          sample: Array<{id: number, number: string, status: string}>;
+        };
+      }
+      
+      const results: DiagnosticResults = {
+        timestamp: new Date().toISOString(),
+        database: {
+          type: storage.constructor.name, 
+          connectionActive: false
+        },
+        orders: {
+          count: 0,
+          sample: []
+        }
+      };
+      
+      // Test database connection
+      try {
+        // @ts-ignore - Accessing private property for diagnostics
+        if (storage.db) {
+          results.database.connectionActive = true;
+          
+          // Try to count orders
+          const ordersData = await storage.getOrders();
+          results.orders.count = ordersData.length;
+          
+          // Get a small sample
+          if (ordersData.length > 0) {
+            results.orders.sample = ordersData.slice(0, 2).map(order => ({
+              id: order.id,
+              number: order.orderNumber,
+              status: order.status
+            }));
+          }
+        }
+      } catch (dbError) {
+        console.error("Database check error:", dbError);
+      }
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Simple diagnostics error:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

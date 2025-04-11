@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
 import ProductCard from "@/components/ProductCard";
@@ -11,8 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 export default function ProductDetail() {
   const { slug } = useParams();
   const { t } = useTranslation();
-  const { addToCart } = useCart();
+  const { addToCart, clearCart } = useCart();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [, navigate] = useLocation();
   
   // State for quantity, selected weight and active tab
   const [quantity, setQuantity] = useState(1);
@@ -25,15 +28,19 @@ export default function ProductDetail() {
   const [currentPrice, setCurrentPrice] = useState<string>("");
   const [currentComparePrice, setCurrentComparePrice] = useState<string>("");
   
-  // Review form state
+  // State for review form
   const [isReviewFormOpen, setIsReviewFormOpen] = useState<boolean>(false);
   const [reviewName, setReviewName] = useState<string>("");
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>("");
   const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
+  const [hasReviewed, setHasReviewed] = useState<boolean>(false);
+  
+  // Get session ID from localStorage or create a new one
+  const [sessionId, setSessionId] = useState<string>("");
   
   // Fetch product details
-  const { data: product, isLoading } = useQuery<Product>({
+  const { data: product, isLoading: productLoading } = useQuery<Product>({
     queryKey: [`/api/products/slug/${slug}`],
   });
   
@@ -69,6 +76,31 @@ export default function ProductDetail() {
       setAverageRating(0);
     }
   }, [product]);
+  
+  useEffect(() => {
+    // Get or create session ID
+    let existingSessionId = localStorage.getItem('sessionId');
+    if (!existingSessionId) {
+      existingSessionId = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('sessionId', existingSessionId);
+    }
+    setSessionId(existingSessionId);
+  }, []);
+  
+  // Check if user has already reviewed this product
+  useEffect(() => {
+    if (sessionId && productReviews.length > 0) {
+      const userReview = productReviews.find(review => review.sessionId === sessionId);
+      setHasReviewed(!!userReview);
+      
+      // Pre-fill form with existing review if the user has already submitted one
+      if (userReview) {
+        setReviewName(userReview.name || "");
+        setReviewRating(userReview.rating || 5);
+        setReviewComment(userReview.comment || "");
+      }
+    }
+  }, [sessionId, productReviews]);
   
   // Handle marking a review as helpful
   const markReviewHelpful = useMutation({
@@ -273,13 +305,22 @@ export default function ProductDetail() {
   };
   
   const increaseQuantity = () => {
-    setQuantity(quantity + 1);
+    // Only allow increasing quantity if it's less than the available stock
+    if (product && product.stockQuantity && quantity < product.stockQuantity) {
+      setQuantity(quantity + 1);
+    }
   };
   
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
+    // Ensure the entered quantity is not more than the available stock
     if (!isNaN(value) && value >= 1) {
-      setQuantity(value);
+      if (product && product.stockQuantity) {
+        // Limit to stock quantity
+        setQuantity(Math.min(value, product.stockQuantity));
+      } else {
+        setQuantity(value);
+      }
     } else {
       setQuantity(1);
     }
@@ -288,17 +329,55 @@ export default function ProductDetail() {
   // Handle add to cart
   const handleAddToCart = () => {
     if (product) {
-      addToCart(product.id, quantity, selectedWeight);
-      console.log(`Added to cart: ${product.name} - ${quantity} units of ${selectedWeight} weight`);
+      // Ensure quantity doesn't exceed stock quantity
+      const safeQuantity = product.stockQuantity ? Math.min(quantity, product.stockQuantity) : quantity;
+      addToCart(product.id, safeQuantity, selectedWeight);
+      console.log(`Added to cart: ${product.name} - ${safeQuantity} units of ${selectedWeight} weight`);
     }
   };
   
   // Handle buy now
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (product) {
-      addToCart(product.id, quantity, selectedWeight);
-      console.log(`Buy now: ${product.name} - ${quantity} units of ${selectedWeight} weight`);
-      window.location.href = "/checkout";
+      try {
+        // Show loading indicator
+        setIsLoading(true);
+        
+        // Ensure quantity doesn't exceed stock quantity
+        const safeQuantity = product.stockQuantity ? Math.min(quantity, product.stockQuantity) : quantity;
+        
+        // Create metadata for selected weight
+        const metaData = selectedWeight ? { selectedWeight } : undefined;
+        
+        // Store the product details in session storage for direct checkout
+        const buyNowItem = {
+          productId: product.id,
+          quantity: safeQuantity,
+          metaData: JSON.stringify(metaData),
+          product: {
+            ...product,
+            // Use the currently displayed price which accounts for the selected weight
+            price: currentPrice
+          }
+        };
+        
+        // Save to session storage
+        sessionStorage.setItem('buyNowItem', JSON.stringify(buyNowItem));
+        
+        console.log(`Buy now: ${product.name} - ${safeQuantity} units of ${selectedWeight} weight at price ${currentPrice}`);
+        
+        // Redirect to checkout page
+        navigate("/checkout?mode=buynow");
+      } catch (error) {
+        console.error("Error processing Buy Now:", error);
+        toast({
+          title: "Error",
+          description: "There was a problem processing your request. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   
@@ -319,33 +398,57 @@ export default function ProductDetail() {
         date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         rating: reviewRating,
         comment: reviewComment,
-        helpfulCount: 0
+        helpfulCount: 0,
+        sessionId: sessionId // Add session ID to track who wrote the review
       };
       
-      // Add the new review to the existing reviews
-      const updatedReviews = [...productReviews, newReview];
+      let updatedReviews: ProductReview[];
       
-      // Update local state for immediate feedback
-      setProductReviews(updatedReviews);
-      
-      // Recalculate average rating
-      if (updatedReviews.length > 0) {
-        const totalRating = updatedReviews.reduce((sum, review) => sum + (review.rating || 0), 0);
-        const calculatedAvg = totalRating / updatedReviews.length;
-        setAverageRating(calculatedAvg);
+      // Check if user has already reviewed this product
+      if (hasReviewed) {
+        // Update the existing review
+        updatedReviews = productReviews.map(review => 
+          review.sessionId === sessionId ? { ...newReview, id: review.id } : review
+        );
+      } else {
+        // Add the new review to the existing reviews
+        updatedReviews = [...productReviews, newReview];
       }
       
-      // Send the updated reviews to the server
-      await apiRequest(`/api/products/${product.id}`, {
-        method: "PATCH", 
-        body: JSON.stringify({
-          reviews: JSON.stringify(updatedReviews),
-          // Also update the reviewCount field for admin dashboard display
-          reviewCount: updatedReviews.length
-        })
-      });
-      
-      return updatedReviews;
+      try {
+        console.log("Updating product with review data:", {
+          reviewCount: updatedReviews.length,
+          rating: calculateAverageRating(updatedReviews)
+        });
+        
+        // Send the updated reviews to the server - directly provide the reviews array
+        // The server will handle the JSON stringification
+        const response = await apiRequest(`/api/products/${product.id}`, {
+          method: "PATCH", 
+          body: JSON.stringify({
+            reviews: updatedReviews,
+            reviewCount: updatedReviews.length,
+            rating: calculateAverageRating(updatedReviews)
+          })
+        });
+        
+        console.log("Review submission response:", response);
+        
+        // Update local state for immediate feedback
+        setProductReviews(updatedReviews);
+        setHasReviewed(true);
+        
+        // Recalculate average rating
+        if (updatedReviews.length > 0) {
+          const calculatedAvg = calculateAverageRating(updatedReviews);
+          setAverageRating(calculatedAvg);
+        }
+        
+        return updatedReviews;
+      } catch (error) {
+        console.error("Error submitting review:", error);
+        throw new Error("Failed to submit review. Please try again later.");
+      }
     },
     onSuccess: () => {
       // Close the review form
@@ -361,7 +464,7 @@ export default function ProductDetail() {
       
       // Show success toast
       toast({
-        title: "Review submitted",
+        title: hasReviewed ? "Review updated" : "Review submitted",
         description: "Thank you for your feedback!",
       });
       
@@ -371,15 +474,33 @@ export default function ProductDetail() {
     onError: (error) => {
       toast({
         title: "Failed to submit review",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive"
       });
     }
   });
   
+  // Helper function to calculate average rating
+  const calculateAverageRating = (reviews: ProductReview[]): number => {
+    if (reviews.length === 0) return 0;
+    
+    const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+    return parseFloat((totalRating / reviews.length).toFixed(2));
+  };
+  
   // Handle review form submission
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if session ID exists
+    if (!sessionId) {
+      toast({
+        title: "Session error",
+        description: "Unable to identify your session. Please refresh the page and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Validate form fields
     if (!reviewName.trim()) {
@@ -416,7 +537,7 @@ export default function ProductDetail() {
     }
   }
   
-  if (isLoading) {
+  if (productLoading || isLoading) {
     return (
       <div className="pt-28 flex justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
@@ -587,6 +708,7 @@ export default function ProductDetail() {
                       value={quantity}
                       onChange={handleQuantityChange}
                       min="1" 
+                      max={product.stockQuantity || 999}
                       className="w-12 text-center border-x py-2 focus:outline-none" 
                     />
                     <button 
@@ -853,10 +975,14 @@ export default function ProductDetail() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-semibold text-gray-800">Customer Reviews</h3>
                     <button 
-                      className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                      className={`${
+                        !sessionId ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-600'
+                      } text-white px-4 py-2 rounded-lg transition-colors`}
                       onClick={() => setIsReviewFormOpen(true)}
+                      disabled={!sessionId}
+                      title={!sessionId ? "Session ID not available" : ""}
                     >
-                      Write a Review
+                      {hasReviewed ? "Edit Your Review" : "Write a Review"}
                     </button>
                   </div>
                   
@@ -967,7 +1093,9 @@ export default function ProductDetail() {
           <div className="bg-white rounded-lg shadow-lg w-full max-w-lg">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-800">Write a Review</h3>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  {hasReviewed ? "Edit Your Review" : "Write a Review"}
+                </h3>
                 <button 
                   className="text-gray-500 hover:text-gray-700 focus:outline-none"
                   onClick={() => setIsReviewFormOpen(false)}

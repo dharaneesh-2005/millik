@@ -2,7 +2,10 @@ import {
   users, type User, type InsertUser,
   products, type Product, type InsertProduct, type ProductReview,
   cartItems, type CartItem, type InsertCartItem,
-  contacts, type Contact, type InsertContact
+  contacts, type Contact, type InsertContact,
+  orders, type Order, type InsertOrder,
+  orderItems, type OrderItem, type InsertOrderItem,
+  settings, type Setting, type InsertSetting
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { verifyToken } from './otpUtils';
@@ -10,6 +13,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq, like, ilike, desc, and, or, count, max, asc } from 'drizzle-orm';
 import postgres from 'postgres';
 import { PgTable } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 /**
  * PostgreSQL implementation of the storage interface
@@ -267,7 +271,16 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteProduct(id: number): Promise<void> {
     return this.executeWithRetry(async () => {
-      await this.db.delete(products).where(eq(products.id, id));
+      try {
+        // With our updated CASCADE constraint, we can directly delete the product
+        // and all related cart items will be automatically deleted
+        console.log(`PostgreSQL: Deleting product ID ${id} with CASCADE constraint handling related items`);
+        await this.db.delete(products).where(eq(products.id, id));
+        console.log(`PostgreSQL: Successfully deleted product ID ${id} and its related items`);
+      } catch (error) {
+        console.error(`Error in PostgreSQL deleting product ${id}:`, error);
+        throw error;
+      }
     });
   }
 
@@ -467,6 +480,13 @@ export class PostgreSQLStorage implements IStorage {
     });
   }
 
+  async deleteCartItemsByProductId(productId: number): Promise<void> {
+    return this.executeWithRetry(async () => {
+      console.log(`PostgreSQL: Deleting cart items for product ID ${productId}`);
+      await this.db.delete(cartItems).where(eq(cartItems.productId, productId));
+    });
+  }
+
   /** 
    * Contact Operations
    */
@@ -480,6 +500,313 @@ export class PostgreSQLStorage implements IStorage {
   async getContacts(): Promise<Contact[]> {
     return this.executeWithRetry(async () => {
       return await this.db.select().from(contacts);
+    });
+  }
+
+  /** 
+   * Order Operations
+   */
+  async createOrder(order: InsertOrder): Promise<Order> {
+    return this.executeWithRetry(async () => {
+      console.log('PostgreSQL: Creating new order:', {
+        orderNumber: order.orderNumber,
+        email: order.email,
+        paymentMethod: order.paymentMethod,
+        totalAmount: order.totalAmount
+      });
+      
+      try {
+        const newOrder = await this.db.insert(orders).values(order).returning();
+        console.log('PostgreSQL: Successfully created order with ID:', newOrder[0].id);
+        return newOrder[0];
+      } catch (error) {
+        console.error('PostgreSQL: Error creating order:', error);
+        throw error;
+      }
+    });
+  }
+
+  async updateOrder(id: number, orderUpdate: Partial<Order>): Promise<Order> {
+    return this.executeWithRetry(async () => {
+      const updated = await this.db
+        .update(orders)
+        .set({ ...orderUpdate, updatedAt: new Date() })
+        .where(eq(orders.id, id))
+        .returning();
+      
+      if (updated.length === 0) {
+        throw new Error(`Order with id ${id} not found`);
+      }
+      
+      return updated[0];
+    });
+  }
+
+  async getOrderById(id: number): Promise<Order | null> {
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(orders).where(eq(orders.id, id));
+      return results.length > 0 ? results[0] : null;
+    });
+  }
+
+  async getOrderByPaymentId(paymentId: string): Promise<Order | null> {
+    return this.executeWithRetry(async () => {
+      console.log(`PostgreSQL: Looking for order with payment ID: ${paymentId}`);
+      try {
+        const results = await this.db.select().from(orders).where(eq(orders.paymentId, paymentId));
+        
+        if (results.length > 0) {
+          console.log(`PostgreSQL: Found order with ID ${results[0].id} for payment ID ${paymentId}`);
+          return results[0];
+        } else {
+          console.log(`PostgreSQL: No order found with payment ID ${paymentId}`);
+          
+          // Log all order payment IDs for debugging
+          const allOrders = await this.db.select({
+            id: orders.id,
+            paymentId: orders.paymentId,
+            orderNumber: orders.orderNumber
+          }).from(orders);
+          
+          console.log('PostgreSQL: Available orders and their payment IDs:');
+          allOrders.forEach(order => {
+            console.log(`Order #${order.id} (${order.orderNumber}): paymentId=${order.paymentId || 'null'}`);
+          });
+          
+          return null;
+        }
+      } catch (error) {
+        console.error(`PostgreSQL: Error finding order by payment ID ${paymentId}:`, error);
+        return null;
+      }
+    });
+  }
+
+  async getOrdersBySessionId(sessionId: string): Promise<Order[]> {
+    return this.executeWithRetry(async () => {
+      return await this.db.select().from(orders).where(eq(orders.sessionId, sessionId));
+    });
+  }
+
+  async getOrdersByEmail(email: string): Promise<Order[]> {
+    return this.executeWithRetry(async () => {
+      return await this.db.select().from(orders).where(eq(orders.email, email));
+    });
+  }
+
+  async getOrders(): Promise<Order[]> {
+    return this.executeWithRetry(async () => {
+      console.log('PostgreSQL: Fetching all orders from database');
+      try {
+        // Log connection string (with credentials masked)
+        const connectionStringParts = this.connectionString.split('@');
+        const maskedConnString = connectionStringParts.length > 1 ? 
+          `***@${connectionStringParts[connectionStringParts.length - 1]}` : 
+          '***masked***';
+        console.log(`PostgreSQL: Using connection: ${maskedConnString}`);
+        
+        // Ensure DB connection is active
+        if (!this.db || !this.client) {
+          console.log('PostgreSQL: Recreating database connection');
+          this.client = postgres(this.connectionString, {
+            ssl: 'require',
+            onnotice: () => {}, // ignore notices
+            onparameter: () => {}, // ignore parameter updates
+            max: 10, // connection pool size
+            idle_timeout: 20, // seconds before connection is released
+          });
+          this.db = drizzle(this.client);
+        }
+        
+        // Execute the query with explicit ordering
+        console.log('PostgreSQL: Executing SELECT query on orders table');
+        const results = await this.db
+          .select()
+          .from(orders)
+          .orderBy(desc(orders.createdAt));
+        
+        console.log(`PostgreSQL: Successfully retrieved ${results.length} orders`);
+        
+        // Log sample order details for debugging
+        if (results.length > 0) {
+          console.log('PostgreSQL: First order details:', {
+            id: results[0].id,
+            orderNumber: results[0].orderNumber,
+            status: results[0].status,
+            email: results[0].email,
+            paymentMethod: results[0].paymentMethod,
+            createdAt: results[0].createdAt
+          });
+          
+          // Log latest 3 orders for more detailed debugging
+          console.log('PostgreSQL: Latest orders:');
+          results.slice(0, 3).forEach((order, index) => {
+            console.log(`Order #${index + 1}:`, {
+              id: order.id,
+              orderNumber: order.orderNumber,
+              status: order.status,
+              createdAt: order.createdAt,
+              email: order.email?.substring(0, 3) + '***' // Mask email for privacy
+            });
+          });
+        } else {
+          console.log('PostgreSQL: No orders found in database - checking if orders table exists');
+          try {
+            // Check if table exists and has structure we expect
+            const tableCheck = await this.db.execute(sql`
+              SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                AND table_name = 'orders'
+              );
+            `);
+            console.log('PostgreSQL: Orders table exists check result:', tableCheck);
+            
+            // Try a raw count query as a backup check
+            const countCheck = await this.db.execute(sql`SELECT COUNT(*) FROM orders;`);
+            console.log('PostgreSQL: Order count from raw SQL:', countCheck);
+          } catch (tableError) {
+            console.error('PostgreSQL: Error checking orders table:', tableError);
+          }
+        }
+        
+        return results;
+      } catch (error) {
+        console.error('PostgreSQL: Error fetching orders:', error);
+        // Try a more direct approach if the ORM query failed
+        try {
+          console.log('PostgreSQL: Attempting fallback with raw SQL query');
+          // Use the execute method instead of query
+          const rawResults = await this.db.execute(sql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 100;`);
+          console.log(`PostgreSQL: Raw query returned ${rawResults.length} orders`);
+          
+          // Convert raw results to Order type
+          const typedResults: Order[] = rawResults.map(row => ({
+            id: Number(row.id),
+            email: row.email as string | null,
+            phone: row.phone as string | null,
+            status: row.status as string,
+            createdAt: row.created_at ? new Date(row.created_at as string) : null,
+            updatedAt: row.updated_at ? new Date(row.updated_at as string) : null,
+            userId: row.user_id ? Number(row.user_id) : null,
+            sessionId: row.session_id as string | null,
+            orderNumber: row.order_number as string,
+            totalAmount: row.total_amount as string,
+            subtotalAmount: row.subtotal_amount as string,
+            taxAmount: row.tax_amount as string,
+            shippingAmount: row.shipping_amount as string,
+            discountAmount: row.discount_amount as string | null,
+            paymentId: row.payment_id as string | null,
+            paymentMethod: row.payment_method as string,
+            paymentStatus: row.payment_status as string | null,
+            transactionId: row.transaction_id as string | null,
+            shippingAddress: row.shipping_address as string,
+            billingAddress: row.billing_address as string | null,
+            shippingMethod: row.shipping_method as string | null,
+            notes: row.notes as string | null,
+            couponCode: row.coupon_code as string | null
+          }));
+          
+          console.log(`PostgreSQL: Converted ${typedResults.length} orders to typed results`);
+          return typedResults;
+        } catch (fallbackError) {
+          console.error('PostgreSQL: Fallback query also failed:', fallbackError);
+          // Return an empty array instead of throwing to prevent UI errors
+          return [];
+        }
+      }
+    }, this.maxRetries);
+  }
+
+  async getOrdersPaginated(page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+    return this.executeWithRetry(async () => {
+      const offset = (page - 1) * limit;
+      
+      // Get total count
+      const countResult = await this.db
+        .select({ count: count() })
+        .from(orders);
+      
+      const total = Number(countResult[0].count) || 0;
+      
+      // Get paginated orders
+      const paginatedOrders = await this.db
+        .select()
+        .from(orders)
+        .orderBy(desc(orders.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      return {
+        orders: paginatedOrders,
+        total
+      };
+    });
+  }
+
+  async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
+    return this.executeWithRetry(async () => {
+      const newOrderItem = await this.db.insert(orderItems).values(orderItem).returning();
+      return newOrderItem[0];
+    });
+  }
+
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return this.executeWithRetry(async () => {
+      return await this.db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+    });
+  }
+
+  /** 
+   * Settings Operations
+   */
+  async createSetting(setting: InsertSetting): Promise<Setting> {
+    return this.executeWithRetry(async () => {
+      const newSetting = await this.db.insert(settings).values(setting).returning();
+      return newSetting[0];
+    });
+  }
+
+  async updateSetting(key: string, settingUpdate: Partial<Setting>): Promise<Setting> {
+    return this.executeWithRetry(async () => {
+      const updated = await this.db
+        .update(settings)
+        .set({ ...settingUpdate, updatedAt: new Date() })
+        .where(eq(settings.key, key))
+        .returning();
+      
+      if (updated.length === 0) {
+        throw new Error(`Setting with key ${key} not found`);
+      }
+      
+      return updated[0];
+    });
+  }
+
+  async deleteSetting(key: string): Promise<boolean> {
+    return this.executeWithRetry(async () => {
+      const result = await this.db
+        .delete(settings)
+        .where(eq(settings.key, key))
+        .returning();
+      
+      return result.length > 0;
+    });
+  }
+
+  async getSetting(key: string): Promise<Setting | null> {
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(settings).where(eq(settings.key, key));
+      return results.length > 0 ? results[0] : null;
+    });
+  }
+
+  async getSettings(group?: string): Promise<Setting[]> {
+    return this.executeWithRetry(async () => {
+      if (group) {
+        return await this.db.select().from(settings).where(eq(settings.group, group));
+      }
+      return await this.db.select().from(settings);
     });
   }
 }
