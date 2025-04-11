@@ -89,10 +89,8 @@ export async function initializeDatabase(url: string) {
     
     // Create necessary tables if they don't exist
     await migrationDb.execute(`
-      -- Drop existing order tables if they exist to recreate with correct structure
-      DROP TABLE IF EXISTS order_items;
-      DROP TABLE IF EXISTS orders;
-      DROP TABLE IF EXISTS settings;
+      -- No longer dropping existing tables to preserve customer orders
+      -- Instead, we'll create tables if they don't exist and update structure if needed
       
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -206,7 +204,7 @@ export async function initializeDatabase(url: string) {
         status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP,
-        user_id INTEGER,
+        user_id INTEGER DEFAULT 1, -- Default to guest user
         session_id TEXT,
         order_number TEXT NOT NULL UNIQUE,
         total_amount TEXT NOT NULL,
@@ -247,6 +245,13 @@ export async function initializeDatabase(url: string) {
         updated_at TIMESTAMP,
         group_name TEXT
       );
+      
+      -- Update existing orders to have a default userId if they don't have one
+      DO $$
+      BEGIN
+        -- Fix existing orders with NULL user_id
+        UPDATE orders SET user_id = 1 WHERE user_id IS NULL;
+      END $$;
     `);
     
     // Create a client for data operations
