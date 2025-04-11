@@ -30,7 +30,7 @@ const EMAIL_FROM = process.env.EMAIL_FROM || "orders@millikit.com";
 const STORE_NAME = process.env.STORE_NAME || "Millikit";
 const STORE_LOGO =
   process.env.STORE_LOGO ||
-  "https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png";
+  "https://i.imghippo.com/files/avks6864DoM.png";
 const BASE_URL = process.env.BASE_URL || "https://millik-1.onrender.com";
 
 // Create email transporter
