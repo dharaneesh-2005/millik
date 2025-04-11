@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
+import { DeleteProductDialog } from "@/components/admin/DeleteProductDialog";
 import {
   Table,
   TableBody,
@@ -2100,6 +2101,21 @@ export default function AdminDashboard() {
           </Tabs>
         </motion.div>
       </motion.div>
+      
+      {/* Product Deletion Dialog */}
+      <DeleteProductDialog
+        isOpen={isDeleteDialogOpen}
+        setIsOpen={setIsDeleteDialogOpen}
+        selectedProduct={selectedProduct}
+        onDelete={async (product) => {
+          try {
+            await deleteProduct(product.id);
+            return Promise.resolve();
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        }}
+      />
     </Layout>
   );
 }
