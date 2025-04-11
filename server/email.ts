@@ -23,7 +23,7 @@ const EMAIL_USER = process.env.EMAIL_USER || 'MS_fJUavy@test-z0vklo6e2mvl7qrx.ml
 const EMAIL_PASS = process.env.EMAIL_PASS || 'mssp.O8cbPAj.3vz9dle7qr74kj50.d4n6FCj';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'orders@millikit.com';
 const STORE_NAME = process.env.STORE_NAME || 'Millikit';
-const STORE_LOGO = process.env.STORE_LOGO || 'https://i.postimg.cc/8c7QrD35/Millikit-logo.png';
+const STORE_LOGO = process.env.STORE_LOGO || 'https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 // Create email transporter
@@ -265,11 +265,11 @@ export const sendOrderConfirmationEmail = async (order: Order, orderItems: Order
             </div>
             <div style="flex: 1; padding: 15px; text-align: center; background-color: #F0FDF4; border-radius: 8px;">
               <div style="font-weight: 600; color: #065F46; margin-bottom: 8px;">Phone Support</div>
-              <a href="tel:+918xxx9xxx9" style="color: #059669; text-decoration: none; font-weight: 500;">+91 8xxx9xxx9</a>
+              <a href="tel:+91 7548871552" style="color: #059669; text-decoration: none; font-weight: 500;">+91 8xxx9xxx9</a>
             </div>
           </div>
           
-          <p style="color: #4B5563; text-align: center;">Visit our website at <a href="${BASE_URL}" style="color: #059669; text-decoration: none; font-weight: 500;">${BASE_URL}</a> to track your order status.</p>
+          <p style="color: #4B5563; text-align: center;">Visit our website at <a href="${millik-1.onrender.com}" style="color: #059669; text-decoration: none; font-weight: 500;">${millik-1.onrender.com}</a> to track your order status.</p>
         </div>
         
         <!-- Footer -->
