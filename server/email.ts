@@ -31,7 +31,7 @@ const STORE_NAME = process.env.STORE_NAME || "Millikit";
 const STORE_LOGO =
   process.env.STORE_LOGO ||
   "https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png";
-const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const BASE_URL = process.env.BASE_URL || "https://millik-1.onrender.com";
 
 // Create email transporter
 const transporter = nodemailer.createTransport({
@@ -322,7 +322,7 @@ export const sendOrderConfirmationEmail = async (
             </div>
             <div style="flex: 1; padding: 15px; text-align: center; background-color: #F0FDF4; border-radius: 8px;">
               <div style="font-weight: 600; color: #065F46; margin-bottom: 8px;">Phone Support</div>
-              <a href="tel:+918xxx9xxx9" style="color: #059669; text-decoration: none; font-weight: 500;">+91 8xxx9xxx9</a>
+              <a href="tel:+917548871552" style="color: #059669; text-decoration: none; font-weight: 500;">+91 7548871552</a>
             </div>
           </div>
           
