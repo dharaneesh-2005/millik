@@ -1,30 +1,37 @@
-import nodemailer from 'nodemailer';
-import * as dotenv from 'dotenv';
-import * as fs from 'fs';
-import { Order, OrderItem, Product } from '@shared/schema';
+import nodemailer from "nodemailer";
+import * as dotenv from "dotenv";
+import * as fs from "fs";
+import { Order, OrderItem, Product } from "@shared/schema";
 
 // Load environment variables
 try {
-  if (fs.existsSync('.env') && !process.env.EMAIL_HOST) {
-    const envConfig = dotenv.parse(fs.readFileSync('.env'));
+  if (fs.existsSync(".env") && !process.env.EMAIL_HOST) {
+    const envConfig = dotenv.parse(fs.readFileSync(".env"));
     for (const key in envConfig) {
       process.env[key] = envConfig[key];
     }
-    console.log('Loaded environment variables from .env file');
+    console.log("Loaded environment variables from .env file");
   }
 } catch (error) {
-  console.error('Error loading .env file:', error instanceof Error ? error.message : String(error));
+  console.error(
+    "Error loading .env file:",
+    error instanceof Error ? error.message : String(error),
+  );
 }
 
 // Email configuration
-const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.mailersend.net';
-const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || '587');
-const EMAIL_USER = process.env.EMAIL_USER || 'MS_fJUavy@test-z0vklo6e2mvl7qrx.mlsender.net';
-const EMAIL_PASS = process.env.EMAIL_PASS || 'mssp.O8cbPAj.3vz9dle7qr74kj50.d4n6FCj';
-const EMAIL_FROM = process.env.EMAIL_FROM || 'orders@millikit.com';
-const STORE_NAME = process.env.STORE_NAME || 'Millikit';
-const STORE_LOGO = process.env.STORE_LOGO || 'https://i.postimg.cc/8c7QrD35/Millikit-logo.png';
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.mailersend.net";
+const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || "587");
+const EMAIL_USER =
+  process.env.EMAIL_USER || "MS_fJUavy@test-z0vklo6e2mvl7qrx.mlsender.net";
+const EMAIL_PASS =
+  process.env.EMAIL_PASS || "mssp.O8cbPAj.3vz9dle7qr74kj50.d4n6FCj";
+const EMAIL_FROM = process.env.EMAIL_FROM || "orders@millikit.com";
+const STORE_NAME = process.env.STORE_NAME || "Millikit";
+const STORE_LOGO =
+  process.env.STORE_LOGO ||
+  "https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png";
+const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 // Create email transporter
 const transporter = nodemailer.createTransport({
@@ -40,59 +47,79 @@ const transporter = nodemailer.createTransport({
 // Send email
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
-    const fromName = process.env.EMAIL_FROM_NAME || 'MILLIKIT';
+    const fromName = process.env.EMAIL_FROM_NAME || "MILLIKIT";
     const info = await transporter.sendMail({
       from: `"${fromName}" <${EMAIL_FROM}>`,
       to,
       subject,
       html,
     });
-    
-    console.log('Email sent:', info.messageId);
+
+    console.log("Email sent:", info.messageId);
     return {
       success: true,
       messageId: info.messageId,
     };
   } catch (error) {
-    console.error('Error sending email:', error instanceof Error ? error.message : String(error));
+    console.error(
+      "Error sending email:",
+      error instanceof Error ? error.message : String(error),
+    );
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   }
 };
 
 // Generate order confirmation email
-export const sendOrderConfirmationEmail = async (order: Order, orderItems: OrderItem[], products: Product[]) => {
+export const sendOrderConfirmationEmail = async (
+  order: Order,
+  orderItems: OrderItem[],
+  products: Product[],
+) => {
   try {
-    const { email, orderNumber, totalAmount, subtotalAmount, taxAmount, shippingAmount, discountAmount, paymentMethod, paymentStatus, status } = order;
-    
+    const {
+      email,
+      orderNumber,
+      totalAmount,
+      subtotalAmount,
+      taxAmount,
+      shippingAmount,
+      discountAmount,
+      paymentMethod,
+      paymentStatus,
+      status,
+    } = order;
+
     if (!email) {
-      console.error('Cannot send order confirmation: Email is missing');
-      return { success: false, error: 'Email is missing' };
+      console.error("Cannot send order confirmation: Email is missing");
+      return { success: false, error: "Email is missing" };
     }
-    
+
     // Create item rows for the order
-    const itemsHtml = orderItems.map(item => {
-      const product = products.find(p => p.id === item.productId);
-      const imageUrl = product?.imageUrl || '';
-      
-      return `
+    const itemsHtml = orderItems
+      .map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        const imageUrl = product?.imageUrl || "";
+
+        return `
         <tr>
           <td style="padding: 12px; border-bottom: 1px solid #eee;">
             <img src="${imageUrl}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
           </td>
           <td style="padding: 12px; border-bottom: 1px solid #eee;">
             <strong>${item.name}</strong>
-            ${item.weight ? `<br><span style="color: #777; font-size: 12px;">Weight: ${item.weight}</span>` : ''}
+            ${item.weight ? `<br><span style="color: #777; font-size: 12px;">Weight: ${item.weight}</span>` : ""}
           </td>
           <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
           <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">₹${parseFloat(item.price.toString()).toFixed(2)}</td>
           <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">₹${parseFloat(item.subtotal.toString()).toFixed(2)}</td>
         </tr>
       `;
-    }).join('');
-    
+      })
+      .join("");
+
     // Create HTML email template with improved design matching website theme
     const html = `
       <!DOCTYPE html>
@@ -125,48 +152,72 @@ export const sendOrderConfirmationEmail = async (order: Order, orderItems: Order
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #4B5563;"><strong>Order Date:</strong></td>
-                <td style="padding: 8px 0; text-align: right;">${new Date(order.createdAt || new Date()).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                <td style="padding: 8px 0; text-align: right;">${new Date(order.createdAt || new Date()).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #4B5563;"><strong>Order Status:</strong></td>
                 <td style="padding: 8px 0; text-align: right;">
                   <span style="background-color: ${
-                    status === 'pending' ? '#FEF3C7' : 
-                    status === 'processing' ? '#DBEAFE' : 
-                    status === 'completed' ? '#D1FAE5' : 
-                    status === 'failed' ? '#FEE2E2' : 
-                    status === 'cancelled' ? '#E5E7EB' : '#f9f9f9'
+                    status === "pending"
+                      ? "#FEF3C7"
+                      : status === "processing"
+                        ? "#DBEAFE"
+                        : status === "completed"
+                          ? "#D1FAE5"
+                          : status === "failed"
+                            ? "#FEE2E2"
+                            : status === "cancelled"
+                              ? "#E5E7EB"
+                              : "#f9f9f9"
                   }; padding: 6px 12px; border-radius: 20px; font-size: 14px; color: ${
-                    status === 'pending' ? '#92400E' : 
-                    status === 'processing' ? '#1E40AF' : 
-                    status === 'completed' ? '#065F46' : 
-                    status === 'failed' ? '#B91C1C' : 
-                    status === 'cancelled' ? '#374151' : '#111827'
+                    status === "pending"
+                      ? "#92400E"
+                      : status === "processing"
+                        ? "#1E40AF"
+                        : status === "completed"
+                          ? "#065F46"
+                          : status === "failed"
+                            ? "#B91C1C"
+                            : status === "cancelled"
+                              ? "#374151"
+                              : "#111827"
                   }; font-weight: 600;">${status.toUpperCase()}</span>
                 </td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #4B5563;"><strong>Payment Method:</strong></td>
                 <td style="padding: 8px 0; text-align: right;">${
-                  paymentMethod === 'razorpay' ? 'Razorpay' :
-                  paymentMethod === 'phonepay' ? 'PhonePe' : 
-                  paymentMethod === 'cod' ? 'Cash on Delivery' : 
-                  paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 
-                  paymentMethod
+                  paymentMethod === "razorpay"
+                    ? "Razorpay"
+                    : paymentMethod === "phonepay"
+                      ? "PhonePe"
+                      : paymentMethod === "cod"
+                        ? "Cash on Delivery"
+                        : paymentMethod === "bank_transfer"
+                          ? "Bank Transfer"
+                          : paymentMethod
                 }</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #4B5563;"><strong>Payment Status:</strong></td>
                 <td style="padding: 8px 0; text-align: right;">
                   <span style="background-color: ${
-                    (paymentStatus || 'pending') === 'pending' ? '#FEF3C7' : 
-                    (paymentStatus || 'pending') === 'completed' ? '#D1FAE5' : 
-                    (paymentStatus || 'pending') === 'failed' ? '#FEE2E2' : '#f9f9f9'
+                    (paymentStatus || "pending") === "pending"
+                      ? "#FEF3C7"
+                      : (paymentStatus || "pending") === "completed"
+                        ? "#D1FAE5"
+                        : (paymentStatus || "pending") === "failed"
+                          ? "#FEE2E2"
+                          : "#f9f9f9"
                   }; padding: 6px 12px; border-radius: 20px; font-size: 14px; color: ${
-                    (paymentStatus || 'pending') === 'pending' ? '#92400E' : 
-                    (paymentStatus || 'pending') === 'completed' ? '#065F46' : 
-                    (paymentStatus || 'pending') === 'failed' ? '#B91C1C' : '#111827'
-                  }; font-weight: 600;">${(paymentStatus || 'pending').toUpperCase()}</span>
+                    (paymentStatus || "pending") === "pending"
+                      ? "#92400E"
+                      : (paymentStatus || "pending") === "completed"
+                        ? "#065F46"
+                        : (paymentStatus || "pending") === "failed"
+                          ? "#B91C1C"
+                          : "#111827"
+                  }; font-weight: 600;">${(paymentStatus || "pending").toUpperCase()}</span>
                 </td>
               </tr>
             </table>
@@ -196,18 +247,19 @@ export const sendOrderConfirmationEmail = async (order: Order, orderItems: Order
               </tr>
             </thead>
             <tbody>
-              ${orderItems.map(item => {
-                const product = products.find(p => p.id === item.productId);
-                const imageUrl = product?.imageUrl || '';
-                
-                return `
+              ${orderItems
+                .map((item) => {
+                  const product = products.find((p) => p.id === item.productId);
+                  const imageUrl = product?.imageUrl || "";
+
+                  return `
                   <tr>
                     <td style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB;">
                       <div style="display: flex; align-items: center;">
                         <img src="${imageUrl}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
                         <div>
                           <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">${item.name}</div>
-                          ${item.weight ? `<div style="color: #6B7280; font-size: 14px;">Weight: ${item.weight}</div>` : ''}
+                          ${item.weight ? `<div style="color: #6B7280; font-size: 14px;">Weight: ${item.weight}</div>` : ""}
                         </div>
                       </div>
                     </td>
@@ -216,19 +268,24 @@ export const sendOrderConfirmationEmail = async (order: Order, orderItems: Order
                     <td style="padding: 16px 12px; border-bottom: 1px solid #E5E7EB; text-align: right; font-weight: 600; color: #111827;">₹${parseFloat(item.subtotal.toString()).toFixed(2)}</td>
                   </tr>
                 `;
-              }).join('')}
+                })
+                .join("")}
             </tbody>
             <tfoot>
               <tr>
                 <td colspan="3" style="padding: 16px 12px; text-align: right; color: #4B5563;"><strong>Subtotal:</strong></td>
                 <td style="padding: 16px 12px; text-align: right; color: #4B5563;">₹${parseFloat(subtotalAmount.toString()).toFixed(2)}</td>
               </tr>
-              ${(discountAmount && parseFloat(discountAmount.toString()) > 0) ? `
+              ${
+                discountAmount && parseFloat(discountAmount.toString()) > 0
+                  ? `
               <tr>
                 <td colspan="3" style="padding: 16px 12px; text-align: right; color: #4B5563;"><strong>Discount:</strong></td>
                 <td style="padding: 16px 12px; text-align: right; color: #DC2626;">-₹${parseFloat(discountAmount.toString()).toFixed(2)}</td>
               </tr>
-              ` : ''}
+              `
+                  : ""
+              }
               <tr>
                 <td colspan="3" style="padding: 16px 12px; text-align: right; color: #4B5563;"><strong>Shipping:</strong></td>
                 <td style="padding: 16px 12px; text-align: right; color: #4B5563;">₹${parseFloat(shippingAmount.toString()).toFixed(2)}</td>
@@ -287,13 +344,20 @@ export const sendOrderConfirmationEmail = async (order: Order, orderItems: Order
       </body>
       </html>
     `;
-    
-    return await sendEmail(email, `Your Order Confirmation #${orderNumber} - ${STORE_NAME}`, html);
+
+    return await sendEmail(
+      email,
+      `Your Order Confirmation #${orderNumber} - ${STORE_NAME}`,
+      html,
+    );
   } catch (error) {
-    console.error('Error generating order confirmation email:', error instanceof Error ? error.message : String(error));
+    console.error(
+      "Error generating order confirmation email:",
+      error instanceof Error ? error.message : String(error),
+    );
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   }
-}; 
+};
