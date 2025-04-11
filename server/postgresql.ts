@@ -12,7 +12,6 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq, like, ilike, desc, and, or, count, max, asc, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { PgTable } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
 /**
  * PostgreSQL implementation of the storage interface
