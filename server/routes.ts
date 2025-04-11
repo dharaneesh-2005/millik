@@ -1,13 +1,15 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCartItemSchema, insertContactSchema, insertProductSchema, insertUserSchema, Product } from "@shared/schema";
+import { insertCartItemSchema, insertContactSchema, insertProductSchema, insertUserSchema, Product, orderItems } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { generateSecret, generateQrCode, verifyToken } from "./otpUtils";
 import { setupAuth } from "./auth";
 import { createRazorpayOrder, verifyPaymentSignature, generateOrderNumber, generateTransactionId } from './razorpay';
 import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm/expressions';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import { sendShippingNotificationEmail } from "./email";
 
 // Session storage for admin authentication
@@ -883,18 +885,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/admin/products/:id", isAdmin, async (req, res) => {
     try {
+      console.log("DELETE Product Request - Headers:", JSON.stringify(req.headers));
+      console.log("DELETE Product Request - Parameters:", req.params);
+      
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
+        console.error("Invalid product ID format:", req.params.id);
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
+      // Log before looking up product
+      console.log("Attempting to lookup product with ID:", id);
+      
       const product = await storage.getProductById(id);
+      
       if (!product) {
+        console.error("Product not found with ID:", id);
         return res.status(404).json({ message: "Product not found" });
       }
 
+      console.log("Found product for deletion:", { 
+        id: product.id, 
+        name: product.name,
+        inOrders: "Checking order_items..."
+      });
+      
+      // Check if product is referenced in order_items before deletion
+      const db = drizzle((storage as any).client);
+      const orderItemsCheck = await db.select({ count: sql<number>`count(*)` })
+        .from(orderItems)
+        .where(eq(orderItems.productId, id));
+      
+      const orderItemsCount = orderItemsCheck[0]?.count || 0;
+      console.log(`Product ${id} is referenced in ${orderItemsCount} order items`);
+      
       // The product deletion now handles cart items in the storage implementation
+      console.log("Executing storage.deleteProduct for ID:", id);
       await storage.deleteProduct(id);
+      
+      console.log("Product successfully deleted, ID:", id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting product:", error);

@@ -255,14 +255,46 @@ export class PostgreSQLStorage implements IStorage {
   async deleteProduct(id: number): Promise<void> {
     return this.executeWithRetry(async () => {
       try {
-        // With our updated CASCADE constraint, we can directly delete the product
-        // and all related cart items will be automatically deleted
-        console.log(`PostgreSQL: Deleting product ID ${id} with CASCADE constraint handling related items`);
-        await this.db.delete(products).where(eq(products.id, id));
-        console.log(`PostgreSQL: Successfully deleted product ID ${id} and its related items`);
+        console.log(`PostgreSQL: Starting product deletion process for ID ${id}`);
+        
+        // First, explicitly delete related cart items
+        try {
+          console.log(`PostgreSQL: Manually deleting related cart items for product ID ${id}`);
+          const result = await this.db.delete(cartItems)
+            .where(eq(cartItems.productId, id))
+            .returning();
+          console.log(`PostgreSQL: Successfully deleted ${result.length} cart items for product ID ${id}`);
+        } catch (cartError) {
+          console.error(`Warning: Error deleting cart items for product ${id}:`, cartError);
+          // Continue with deletion even if cart items cleanup fails
+        }
+        
+        // Second, explicitly delete related order items
+        try {
+          console.log(`PostgreSQL: Manually deleting related order items for product ID ${id}`);
+          const result = await this.db.delete(orderItems)
+            .where(eq(orderItems.productId, id))
+            .returning();
+          console.log(`PostgreSQL: Successfully deleted ${result.length} order items for product ID ${id}`);
+        } catch (orderItemError) {
+          console.error(`Warning: Error deleting order items for product ${id}:`, orderItemError);
+          // Continue with deletion even if order items cleanup fails
+        }
+        
+        // Finally, delete the product
+        console.log(`PostgreSQL: Now deleting product ID ${id} directly`);
+        const deleteResult = await this.db.delete(products)
+          .where(eq(products.id, id))
+          .returning({ id: products.id, name: products.name });
+        
+        if (deleteResult.length === 0) {
+          console.error(`PostgreSQL: Product ID ${id} not found or already deleted`);
+        } else {
+          console.log(`PostgreSQL: Successfully deleted product: ${JSON.stringify(deleteResult[0])}`);
+        }
       } catch (error) {
         console.error(`Error in PostgreSQL deleting product ${id}:`, error);
-        throw error;
+        throw new Error(`Failed to delete product ID ${id}: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
   }
