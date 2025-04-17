@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import logoPath from "@assets/LOGO-removebg-preview.png";
+import LogoLoader from "@/components/LogoLoader";
 
 // UI Components
 import {
@@ -388,7 +389,9 @@ export default function AdminLogin() {
                       >
                         {isLoggingIn ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <div className="mr-2 h-4 w-4">
+                              <LogoLoader size="small" />
+                            </div>
                             Signing in...
                           </>
                         ) : (
@@ -501,7 +504,9 @@ export default function AdminLogin() {
                       >
                         {isLoggingIn ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <div className="mr-2 h-4 w-4">
+                              <LogoLoader size="small" />
+                            </div>
                             Verifying...
                           </>
                         ) : (
@@ -574,7 +579,9 @@ export default function AdminLogin() {
                       >
                         {isLoggingIn ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <div className="mr-2 h-4 w-4">
+                              <LogoLoader size="small" />
+                            </div>
                             Verifying...
                           </>
                         ) : (
@@ -661,7 +668,9 @@ export default function AdminLogin() {
                       >
                         {isLoggingIn ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <div className="mr-2 h-4 w-4">
+                              <LogoLoader size="small" />
+                            </div>
                             Verifying...
                           </>
                         ) : (
@@ -782,7 +791,9 @@ export default function AdminLogin() {
                       >
                         {isLoggingIn ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <div className="mr-2 h-4 w-4">
+                              <LogoLoader size="small" />
+                            </div>
                             Verifying...
                           </>
                         ) : (

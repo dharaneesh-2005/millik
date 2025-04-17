@@ -37,11 +37,20 @@ export async function throwIfResNotOk(res: Response): Promise<void> {
  * Helper to create fetch requests with the correct headers for API requests
  */
 export const apiRequest = async (method: string, url: string, data?: any) => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  // Add cache control headers for better performance
+  // Only for GET requests, not for mutations
+  if (method.toUpperCase() === 'GET') {
+    headers['Cache-Control'] = 'max-age=300'; // 5 minutes cache
+    headers['Pragma'] = 'no-cache'; // For compatibility with HTTP/1.0 caches
+  }
+  
   const options: RequestInit = {
     method,
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
   };
   
   if (data) {
@@ -80,6 +89,12 @@ export const adminApiRequest = async (method: string, url: string, data?: any) =
     headers["x-admin-key"] = adminKey;
   }
   
+  // Add cache control headers for better performance
+  // Only for GET requests, not for mutations
+  if (method.toUpperCase() === 'GET') {
+    headers['Cache-Control'] = 'max-age=300'; // 5 minutes cache
+  }
+  
   const options: RequestInit = {
     method,
     headers,
@@ -112,6 +127,10 @@ export const getQueryFn: <T>(options: {
     try {
       const res = await fetch(queryKey[0] as string, {
         credentials: "include",
+        // Add cache-control headers for better performance
+        headers: {
+          'Cache-Control': 'max-age=300', // 5 minutes cache
+        }
       });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
@@ -121,8 +140,6 @@ export const getQueryFn: <T>(options: {
       await throwIfResNotOk(res);
       return await res.json();
     } catch (error) {
-      console.error("Error in query function:", error);
-      
       // If we should return null on error
       if (unauthorizedBehavior === "returnNull") {
         return null;
@@ -145,17 +162,10 @@ export const getAdminQueryFn: <T>(options: {
     const sessionId = sessionStorage.getItem("adminSessionId");
     const isAdminAuth = sessionStorage.getItem("adminAuthenticated") === "true";
     
-    console.log("getAdminQueryFn executing with:", { 
-      sessionId, 
-      isAdminAuth, 
-      queryKey 
-    });
-    
     // If we don't have a session ID and we're not authenticated, return null early
     // But only if we also don't have an admin key available
     const adminKey = import.meta.env.VITE_ADMIN_KEY;
     if (!sessionId && !isAdminAuth && !adminKey && unauthorizedBehavior === "returnNull") {
-      console.log("No admin authentication found, returning null");
       return null;
     }
     
@@ -170,23 +180,23 @@ export const getAdminQueryFn: <T>(options: {
     // Add admin key if available (for serverless environments like Vercel)
     if (adminKey) {
       headers["x-admin-key"] = adminKey;
-      console.log("Added admin key to query request");
     }
     
     try {
+      // Add caching headers for GET requests in admin endpoints too
+      // Check if the query URL path contains 'GET' for better caching
+      if (typeof queryKey[0] === 'string' && queryKey[0].includes('GET')) {
+        headers['Cache-Control'] = 'max-age=300'; // 5 minutes cache
+        headers['Pragma'] = 'no-cache'; // For compatibility with HTTP/1.0 caches
+      }
+      
       const res = await fetch(queryKey[0] as string, {
         credentials: "include",
         headers,
       });
   
-      console.log(`Admin API response for ${queryKey[0]}:`, { 
-        status: res.status,
-        ok: res.ok,
-      });
-  
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         // Clear stored session on 401
-        console.log("Received 401, clearing session data");
         sessionStorage.removeItem("adminAuthenticated");
         sessionStorage.removeItem("adminSessionId");
         return null;
@@ -195,8 +205,6 @@ export const getAdminQueryFn: <T>(options: {
       await throwIfResNotOk(res);
       return await res.json();
     } catch (error) {
-      console.error("Error in admin query function:", error);
-      
       // If we should return null on error with 401-related errors
       if (unauthorizedBehavior === "returnNull") {
         return null;
@@ -212,11 +220,15 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes instead of Infinity for better cache management
+      retry: 1, // Allow one retry for network issues
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff with max of 10 seconds
+      refetchOnReconnect: 'always', // Refetch when network reconnects
+      gcTime: 15 * 60 * 1000, // 15 minutes (in v5, cacheTime is renamed to gcTime)
     },
     mutations: {
-      retry: false,
+      retry: 1, // Allow one retry for network issues
+      retryDelay: 1000, // Wait 1 second before retrying
     },
   },
 });

@@ -5,6 +5,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { calculateCartSummary } from "@/lib/cart";
+import LogoLoader from "@/components/LogoLoader";
 
 export default function Cart() {
   const { t } = useTranslation();
@@ -110,7 +111,7 @@ export default function Cart() {
         <div className="container mx-auto px-6">
           {isLoading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+              <LogoLoader size="medium" text="Loading cart items..." />
             </div>
           ) : cartItems.length > 0 ? (
             <div className="grid lg:grid-cols-3 gap-8">
@@ -132,7 +133,6 @@ export default function Cart() {
                           const metadata = JSON.parse(item.metaData);
                           if (metadata && metadata.selectedWeight) {
                             selectedWeight = metadata.selectedWeight;
-                            console.log(`Found selectedWeight in metaData: ${selectedWeight} for item ${item.id}`);
                           }
                         }
                       } catch (error) {

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
 import ProductCard from "@/components/ProductCard";
+import LogoLoader from "@/components/LogoLoader";
 import { Product } from "@shared/schema";
 
 export default function Home() {
@@ -908,11 +909,7 @@ export default function Home() {
 
           {isLoading ? (
             <div className="flex justify-center py-20">
-              <motion.div 
-                className="w-16 h-16 border-4 border-green-200 border-t-green-600 rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
+              <LogoLoader size="large" text="Loading products..." />
             </div>
           ) : (
             <motion.div 

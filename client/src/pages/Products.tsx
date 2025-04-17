@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import ProductCard from "@/components/ProductCard";
+import LogoLoader from "@/components/LogoLoader";
 import { Product } from "@shared/schema";
 
 export default function Products() {
@@ -278,7 +279,7 @@ export default function Products() {
         <div className="container mx-auto px-6">
           {isLoading || isSearchLoading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+              <LogoLoader size="large" text="Loading products..." />
             </div>
           ) : filteredProducts.length > 0 ? (
             <div className={viewMode === "grid" ? "grid md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}>

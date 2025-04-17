@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Layout from "@/components/Layout";
+import LogoLoader from "@/components/LogoLoader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -444,7 +445,9 @@ export default function ProductForm() {
     return (
       <Layout>
         <div className="container mx-auto py-12 flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+          <div className="h-16 w-16 flex items-center justify-center">
+            <LogoLoader size="medium" />
+          </div>
         </div>
       </Layout>
     );
@@ -1300,7 +1303,9 @@ export default function ProductForm() {
                   >
                     {submitting ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <div className="mr-2 h-4 w-4">
+                          <LogoLoader size="small" />
+                        </div>
                         Saving...
                       </>
                     ) : (

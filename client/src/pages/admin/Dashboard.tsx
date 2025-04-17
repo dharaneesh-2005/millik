@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
+import LogoLoader from "@/components/LogoLoader";
 import { DeleteProductDialog } from "@/components/admin/DeleteProductDialog";
 import {
   Table,
@@ -1108,7 +1109,7 @@ export default function AdminDashboard() {
                 <CardContent>
                   {loading ? (
                     <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                      <LogoLoader />
                     </div>
                   ) : (
                     <>
@@ -1499,7 +1500,9 @@ export default function AdminDashboard() {
                         >
                           {isDiagnosticsLoading ? (
                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <div className="mr-2 h-4 w-4">
+                                <LogoLoader size="small" />
+                              </div>
                               Running...
                             </>
                           ) : (
@@ -1852,7 +1855,9 @@ export default function AdminDashboard() {
                     >
                       {loading || isRefreshingStatsData.current ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <div className="mr-2 h-4 w-4">
+                            <LogoLoader size="small" />
+                          </div>
                           Refreshing...
                         </>
                       ) : (

@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
 import ProductCard from "@/components/ProductCard";
+import LogoLoader from "@/components/LogoLoader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Product, ProductReview } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -540,7 +541,7 @@ export default function ProductDetail() {
   if (productLoading || isLoading) {
     return (
       <div className="pt-28 flex justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+        <LogoLoader size="large" text="Loading product details..." />
       </div>
     );
   }
