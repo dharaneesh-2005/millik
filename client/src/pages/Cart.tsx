@@ -154,7 +154,7 @@ export default function Cart() {
                               />
                             </div>
                             
-                            <div className="flex-grow">
+                            <div className="flex-grow text-center md:text-left">
                               <h3 className="text-lg font-medium text-gray-800">
                                 {item.product?.name}
                               </h3>
@@ -176,7 +176,7 @@ export default function Cart() {
                               </p>
                             </div>
                             
-                            <div className="flex flex-col md:flex-row items-center gap-4">
+                            <div className="flex flex-col items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
                               <div className="flex items-center border rounded-md overflow-hidden">
                                 <button 
                                   className="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none"
@@ -187,7 +187,7 @@ export default function Cart() {
                                 >-</button>
                                 <input 
                                   type="number" 
-                                  className="w-12 text-center py-1 focus:outline-none" 
+                                  className="w-14 text-center py-1 focus:outline-none" 
                                   value={quantities[item.id] || item.quantity}
                                   onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                                   min="1"
@@ -205,9 +205,9 @@ export default function Cart() {
                                 >+</button>
                               </div>
                               
-                              <div>
+                              <div className="w-full text-center">
                                 <button 
-                                  className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 focus:outline-none transition-colors text-sm"
+                                  className="bg-red-600 text-white px-4 py-1.5 rounded-md hover:bg-red-700 focus:outline-none transition-colors text-sm w-full md:w-auto"
                                   onClick={() => handleRemoveItem(item.id)}
                                 >
                                   {t('removeItem')}

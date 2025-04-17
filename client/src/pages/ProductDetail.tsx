@@ -579,15 +579,15 @@ export default function ProductDetail() {
       
       {/* Product Detail */}
       <section className="py-8 bg-white">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="grid lg:grid-cols-2 gap-8 md:gap-12">
             {/* Product Images */}
             <div>
               <div className="mb-4">
                 <img 
                   src={mainImage} 
                   alt={product.name} 
-                  className="w-full h-96 object-cover rounded-xl shadow-md"
+                  className="w-full h-72 sm:h-96 object-cover rounded-xl shadow-md"
                 />
               </div>
               <div className="product-image-gallery grid grid-cols-4 gap-2">
@@ -595,7 +595,7 @@ export default function ProductDetail() {
                 <img 
                   src={product.imageUrl} 
                   alt={`${product.name} - Main`} 
-                  className={`w-full h-24 object-cover rounded-lg border-2 cursor-pointer ${
+                  className={`w-full h-16 sm:h-24 object-cover rounded-lg border-2 cursor-pointer ${
                     mainImage === product.imageUrl ? 'border-green-500' : 'border-transparent'
                   }`}
                   onClick={() => handleImageClick(product.imageUrl)}
@@ -607,7 +607,7 @@ export default function ProductDetail() {
                     key={index}
                     src={img} 
                     alt={`${product.name} - Image ${index + 1}`} 
-                    className={`w-full h-24 object-cover rounded-lg border-2 cursor-pointer ${
+                    className={`w-full h-16 sm:h-24 object-cover rounded-lg border-2 cursor-pointer ${
                       mainImage === img ? 'border-green-500' : 'border-transparent'
                     }`}
                     onClick={() => handleImageClick(img)}
@@ -618,13 +618,13 @@ export default function ProductDetail() {
             
             {/* Product Info */}
             <div>
-              <div className="flex items-center mb-4">
+              <div className="flex flex-wrap items-center mb-4 gap-2">
                 {product.badge && (
                   <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
                     {product.badge}
                   </span>
                 )}
-                <div className="star-rating ml-4">
+                <div className="star-rating ml-0 sm:ml-4">
                   {[...Array(5)].map((_, i) => {
                     let starClass = 'far fa-star'; // Default empty star
                     
@@ -640,24 +640,24 @@ export default function ProductDetail() {
                 </div>
               </div>
               
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
               <p className="text-gray-600 mb-6">{product.shortDescription}</p>
               
-              <div className="flex items-baseline mb-6">
-                <span className="text-3xl font-bold text-green-600 mr-2">
+              <div className="flex flex-wrap items-baseline mb-6 gap-2">
+                <span className="text-2xl sm:text-3xl font-bold text-green-600">
                   ₹{currentPrice || product.price}
                 </span>
                 {currentComparePrice ? (
                   <>
                     <span className="text-gray-500 line-through">₹{currentComparePrice}</span>
-                    <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
                       Save {Math.round((1 - (parseFloat(currentPrice || product.price) / parseFloat(currentComparePrice))) * 100)}%
                     </span>
                   </>
                 ) : product.comparePrice && (
                   <>
                     <span className="text-gray-500 line-through">₹{product.comparePrice}</span>
-                    <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
                       Save {Math.round((1 - (parseFloat(currentPrice || product.price) / parseFloat(product.comparePrice))) * 100)}%
                     </span>
                   </>
@@ -697,7 +697,7 @@ export default function ProductDetail() {
               </div>
               
               <div className="mb-6">
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <h3 className="text-sm font-medium text-gray-700">{t('quantity')}:</h3>
                   <div className="flex items-center border rounded-lg overflow-hidden">
                     <button 
@@ -710,7 +710,7 @@ export default function ProductDetail() {
                       onChange={handleQuantityChange}
                       min="1" 
                       max={product.stockQuantity || 999}
-                      className="w-12 text-center border-x py-2 focus:outline-none" 
+                      className="w-14 text-center border-x py-2 focus:outline-none" 
                     />
                     <button 
                       className="px-3 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none"
@@ -725,7 +725,7 @@ export default function ProductDetail() {
                 </div>
               </div>
               
-              <div className="flex space-x-4 mb-8">
+              <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4 mb-8">
                 <button 
                   className="flex-1 bg-green-700 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleAddToCart}
@@ -745,7 +745,7 @@ export default function ProductDetail() {
               </div>
               
               <div className="border-t pt-6">
-                <div className="flex items-center space-x-8 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2 text-gray-600">
                     <i className="fas fa-check-circle text-green-600"></i>
                     <span>100% Organic</span>
@@ -754,8 +754,6 @@ export default function ProductDetail() {
                     <i className="fas fa-truck text-green-600"></i>
                     <span>Free shipping over ₹1000</span>
                   </div>
-                </div>
-                <div className="flex items-center space-x-8">
                   <div className="flex items-center space-x-2 text-gray-600">
                     <i className="fas fa-sync-alt text-green-600"></i>
                     <span>Easy 30-day returns</span>
@@ -775,10 +773,10 @@ export default function ProductDetail() {
       <section className="py-12 bg-gray-50">
         <div className="container mx-auto px-6">
           {/* Tabs Navigation */}
-          <div className="border-b flex overflow-x-auto">
+          <div className="border-b flex overflow-x-auto hide-scrollbar">
             <button
               onClick={() => setActiveTab("description")}
-              className={`px-8 py-4 font-medium focus:outline-none ${
+              className={`px-4 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium focus:outline-none whitespace-nowrap ${
                 activeTab === "description"
                   ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-500 hover:text-green-600"
@@ -788,7 +786,7 @@ export default function ProductDetail() {
             </button>
             <button
               onClick={() => setActiveTab("nutrition")}
-              className={`px-8 py-4 font-medium focus:outline-none ${
+              className={`px-4 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium focus:outline-none whitespace-nowrap ${
                 activeTab === "nutrition"
                   ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-500 hover:text-green-600"
@@ -798,7 +796,7 @@ export default function ProductDetail() {
             </button>
             <button
               onClick={() => setActiveTab("cooking")}
-              className={`px-8 py-4 font-medium focus:outline-none ${
+              className={`px-4 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium focus:outline-none whitespace-nowrap ${
                 activeTab === "cooking"
                   ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-500 hover:text-green-600"
@@ -808,7 +806,7 @@ export default function ProductDetail() {
             </button>
             <button
               onClick={() => setActiveTab("reviews")}
-              className={`px-8 py-4 font-medium focus:outline-none ${
+              className={`px-4 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium focus:outline-none whitespace-nowrap ${
                 activeTab === "reviews"
                   ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-500 hover:text-green-600"
@@ -973,12 +971,12 @@ export default function ProductDetail() {
               <div className="space-y-8">
                 {/* Review Summary */}
                 <div className="bg-white p-6 rounded-lg shadow-sm">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <h3 className="text-xl font-semibold text-gray-800">Customer Reviews</h3>
                     <button 
                       className={`${
                         !sessionId ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-600'
-                      } text-white px-4 py-2 rounded-lg transition-colors`}
+                      } text-white px-4 py-2 rounded-lg transition-colors text-sm sm:text-base`}
                       onClick={() => setIsReviewFormOpen(true)}
                       disabled={!sessionId}
                       title={!sessionId ? "Session ID not available" : ""}
@@ -987,10 +985,10 @@ export default function ProductDetail() {
                     </button>
                   </div>
                   
-                  <div className="flex items-center mt-4">
-                    <div className="text-5xl font-bold text-gray-800 mr-4">{averageRating.toFixed(1)}</div>
+                  <div className="flex flex-col sm:flex-row sm:items-center mt-4">
+                    <div className="text-5xl font-bold text-gray-800 mr-4 text-center sm:text-left mb-2 sm:mb-0">{averageRating.toFixed(1)}</div>
                     <div>
-                      <div className="star-rating text-xl">
+                      <div className="star-rating text-xl text-center sm:text-left">
                         {[...Array(5)].map((_, i) => {
                           let starClass = 'far fa-star'; // Default empty star
                           
@@ -1003,7 +1001,7 @@ export default function ProductDetail() {
                           return <i key={i} className={starClass}></i>;
                         })}
                       </div>
-                      <p className="text-gray-600 mt-1">Based on {productReviews.length} reviews</p>
+                      <p className="text-gray-600 mt-1 text-center sm:text-left">Based on {productReviews.length} reviews</p>
                     </div>
                   </div>
                   
@@ -1038,8 +1036,8 @@ export default function ProductDetail() {
                   {productReviews.length > 0 ? (
                     <>
                       {productReviews.map((review) => (
-                        <div key={review.id} className="bg-white p-6 rounded-lg shadow-sm">
-                          <div className="flex justify-between items-start">
+                        <div key={review.id} className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                             <div>
                               <h4 className="font-semibold text-gray-800">{review.name}</h4>
                               <div className="flex items-center mt-1">
@@ -1051,7 +1049,7 @@ export default function ProductDetail() {
                                 <span className="text-xs text-gray-500 ml-2">Verified Purchase</span>
                               </div>
                             </div>
-                            <span className="text-sm text-gray-500">{review.date}</span>
+                            <span className="text-sm text-gray-500 mt-1 sm:mt-0">{review.date}</span>
                           </div>
                           <p className="mt-3 text-gray-700">{review.comment}</p>
                           <div className="flex mt-4">
@@ -1090,11 +1088,11 @@ export default function ProductDetail() {
       
       {/* Review Form Modal */}
       {isReviewFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg">
-            <div className="p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg overflow-y-auto max-h-[90vh]">
+            <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-800">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
                   {hasReviewed ? "Edit Your Review" : "Write a Review"}
                 </h3>
                 <button 
@@ -1125,21 +1123,23 @@ export default function ProductDetail() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Rating
                   </label>
-                  <div className="flex items-center space-x-1">
-                    {[1, 2, 3, 4, 5].map((rating) => (
-                      <button
-                        key={rating}
-                        type="button"
-                        onClick={() => setReviewRating(rating)}
-                        className="text-2xl focus:outline-none"
-                      >
-                        <i 
-                          className={rating <= reviewRating ? 'fas fa-star text-yellow-400' : 'far fa-star text-gray-300'} 
-                          aria-hidden="true"
-                        ></i>
-                      </button>
-                    ))}
-                    <span className="ml-2 text-sm text-gray-600">
+                  <div className="flex flex-col sm:flex-row">
+                    <div className="flex items-center space-x-2 sm:space-x-1">
+                      {[1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          onClick={() => setReviewRating(rating)}
+                          className="text-2xl focus:outline-none p-1 sm:p-0"
+                        >
+                          <i 
+                            className={rating <= reviewRating ? 'fas fa-star text-yellow-400' : 'far fa-star text-gray-300'} 
+                            aria-hidden="true"
+                          ></i>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="mt-2 sm:mt-0 sm:ml-2 text-sm text-gray-600">
                       {reviewRating} out of 5 stars
                     </span>
                   </div>
@@ -1160,18 +1160,18 @@ export default function ProductDetail() {
                   ></textarea>
                 </div>
                 
-                <div className="flex justify-end space-x-3">
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-3 sm:space-x-3">
                   <button
                     type="button"
                     onClick={() => setIsReviewFormOpen(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none"
+                    className="order-2 sm:order-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitReview.isPending}
-                    className="px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="order-1 sm:order-2 px-4 py-3 sm:py-2 bg-green-700 text-white rounded-md hover:bg-green-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitReview.isPending ? 'Submitting...' : 'Submit Review'}
                   </button>
@@ -1184,11 +1184,11 @@ export default function ProductDetail() {
       
       {/* Related Products */}
       {relatedProducts && relatedProducts.length > 0 && (
-        <section className="py-12 bg-white">
-          <div className="container mx-auto px-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-8">{t('relatedProducts')}</h2>
+        <section className="py-10 sm:py-12 bg-white">
+          <div className="container mx-auto px-4 sm:px-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6 sm:mb-8 text-center sm:text-left">{t('relatedProducts')}</h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {relatedProducts.map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
