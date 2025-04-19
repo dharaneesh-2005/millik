@@ -49,9 +49,9 @@ export function AdminProtectedRoute({ children, ...rest }: AdminProtectedRoutePr
           );
         }
         
-        // Redirect to login if not authenticated
+        // Redirect to secure login if not authenticated
         if (!isAuthenticated || !isAdminAuth) {
-          return <Redirect to="/admin/login" />;
+          return <Redirect to="/millikit-control-panel-secure" />;
         }
         
         // Redirect to home if authenticated but not admin

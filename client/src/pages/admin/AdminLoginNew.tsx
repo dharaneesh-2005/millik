@@ -42,10 +42,10 @@ export default function AdminLogin() {
     
     console.log("AdminLogin auth check:", { adminSession, adminAuthenticated });
     
-    // If already authenticated, redirect to dashboard
+    // If already authenticated, redirect to the secure management dashboard
     if (adminSession && adminAuthenticated) {
-      console.log("Already authenticated, redirecting to dashboard");
-      navigate("/admin");
+      console.log("Already authenticated, redirecting to management dashboard");
+      navigate("/management-dashboard");
     }
   }, [navigate]);
   
@@ -102,8 +102,8 @@ export default function AdminLogin() {
         
         // Add a small delay to ensure sessionStorage is set before redirect
         setTimeout(() => {
-          console.log("Redirecting to admin dashboard");
-          window.location.href = "/admin"; // Use direct navigation for more reliability
+          console.log("Redirecting to management dashboard");
+          window.location.href = "/management-dashboard"; // Use direct navigation for more reliability
         }, 500);
       } else {
         throw new Error(result.message || "Invalid username or password");

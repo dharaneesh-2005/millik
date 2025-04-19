@@ -43,19 +43,19 @@ function App() {
         <CartProvider>
           <AdminAuthProvider>
             <Switch>
-              {/* Admin Auth Route */}
-              <Route path="/admin/login" component={AdminLogin} />
+              {/* Admin Access through a non-obvious route */}
+              <Route path="/millikit-control-panel-secure" component={AdminLogin} />
               
-              {/* Protected Admin Routes */}
-              <AdminProtectedRoute path="/admin">
+              {/* Protected Admin Routes - now with non-standard paths for additional security */}
+              <AdminProtectedRoute path="/management-dashboard">
                 <AdminDashboard />
               </AdminProtectedRoute>
               
-              <AdminProtectedRoute path="/admin/products/new">
+              <AdminProtectedRoute path="/management-dashboard/products/new">
                 <ProductForm />
               </AdminProtectedRoute>
               
-              <AdminProtectedRoute path="/admin/products/:id">
+              <AdminProtectedRoute path="/management-dashboard/products/:id">
                 <ProductForm />
               </AdminProtectedRoute>
 

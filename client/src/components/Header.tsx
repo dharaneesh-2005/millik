@@ -92,18 +92,7 @@ export default function Header() {
               <LanguageSelector />
             </div>
             
-            {/* Admin login icon */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              whileHover={{ scale: 1.1 }}
-              className="py-1"
-            >
-              <Link href="/admin/login" className="text-gray-700 hover:text-green-600 transition-colors">
-                <i className="fas fa-user-shield text-2xl"></i>
-              </Link>
-            </motion.div>
+            {/* Admin login icon removed for security */}
             
             {/* Cart icon */}
             <motion.div
@@ -160,7 +149,7 @@ export default function Header() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              {['/', '/products', '/contact', '/admin/login'].map((path, index) => (
+              {['/', '/products', '/contact'].map((path, index) => (
                 <motion.div
                   key={path}
                   initial={{ opacity: 0, x: -10 }}
@@ -174,8 +163,7 @@ export default function Header() {
                   >
                     {path === '/' ? t('home') : 
                       path === '/products' ? t('products') : 
-                      path === '/contact' ? t('contact') : 
-                      'Admin'}
+                      t('contact')}
                   </Link>
                 </motion.div>
               ))}
