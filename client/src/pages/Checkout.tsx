@@ -167,6 +167,9 @@ export default function Checkout() {
         email: formData.email,
         phone: formattedPhone,
       });
+      
+      // Debug: Check if Razorpay key is available in env
+      console.log('Razorpay Key from ENV:', import.meta.env.VITE_RAZORPAY_KEY_ID);
 
       // Prepare the items array based on whether we're in buy now mode or regular checkout
       const checkoutItems = isBuyNow && buyNowItem 
@@ -220,7 +223,7 @@ export default function Checkout() {
       
       // Create Razorpay payment options
       let rzpOptions = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_ICFzlzJpqAvLWl',
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: Math.round(total * 100), // convert to paisa
         currency: 'INR',
         name: 'Millikit',

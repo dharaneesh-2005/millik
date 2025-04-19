@@ -160,7 +160,7 @@ export default function AdminDashboard() {
       // This prevents immediate redirect loops
       setTimeout(() => {
         console.log("Redirecting to login from dashboard now");
-        window.location.href = "/admin/login";
+        window.location.href = "/millikit-control-panel-secure";
       }, 1000);
     } else {
       console.log("Admin is authenticated, staying on dashboard");

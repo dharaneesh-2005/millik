@@ -17,8 +17,13 @@ try {
 }
 
 // Razorpay configuration
-const KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_ICFzlzJpqAvLWl';
-const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'NZIF2J0Nx3eeMYADOJ8hJtDs';
+const KEY_ID = process.env.RAZORPAY_KEY_ID;
+const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+
+// Log a warning if the keys aren't set
+if (!KEY_ID || !KEY_SECRET) {
+  console.warn('Razorpay API keys not found in environment variables!');
+}
 
 // Define Razorpay order response types
 interface RazorpayOrderResponse {
