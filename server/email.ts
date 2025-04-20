@@ -790,22 +790,35 @@ export const sendShippingNotificationEmail = async (
             <div class="tracking-section mobile-narrow-padding" style="position: relative; background: linear-gradient(165deg, #f0fdf4 0%, #dcfce7 100%); padding: 2rem; border-radius: 16px; margin: 2rem 0;">
               <h3 style="margin-top: 0; color: #065F46; font-weight: 600; font-size: 20px; position: relative; z-index: 2;">Shipping Progress</h3>
               
-              <div class="progress-tracker">
-                <div class="progress-step completed">
-                  <span style="font-size: 12px;">✓</span>
-                  <span class="progress-label">Order Placed</span>
+              <div class="progress-tracker" style="display: flex; justify-content: space-between; margin: 30px 0; position: relative;">
+                <div class="progress-line" style="position: absolute; top: 15px; left: 30px; right: 30px; height: 2px; background-color: #D1FAE5; z-index: 1;"></div>
+                
+                <div class="progress-step completed" style="flex: 1; text-align: center; position: relative; z-index: 2;">
+                  <div style="margin: 0 auto 10px; width: 30px; height: 30px; background-color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; line-height: 1;">
+                    <span style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;">✓</span>
+                  </div>
+                  <span class="progress-label" style="font-size: 14px; color: #059669; font-weight: 500;">Order Placed</span>
                 </div>
-                <div class="progress-step completed">
-                  <span style="font-size: 12px;">✓</span>
-                  <span class="progress-label">Processing</span>
+                
+                <div class="progress-step completed" style="flex: 1; text-align: center; position: relative; z-index: 2;">
+                  <div style="margin: 0 auto 10px; width: 30px; height: 30px; background-color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; line-height: 1;">
+                    <span style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;">✓</span>
+                  </div>
+                  <span class="progress-label" style="font-size: 14px; color: #059669; font-weight: 500;">Processing</span>
                 </div>
-                <div class="progress-step active pulse">
-                  <span style="font-size: 12px;">•</span>
-                  <span class="progress-label active">Shipped</span>
+                
+                <div class="progress-step active pulse" style="flex: 1; text-align: center; position: relative; z-index: 2;">
+                  <div style="margin: 0 auto 10px; width: 30px; height: 30px; background-color: #10B981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; line-height: 1; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);">
+                    <span style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;">•</span>
+                  </div>
+                  <span class="progress-label active" style="font-size: 14px; color: #059669; font-weight: 600;">Shipped</span>
                 </div>
-                <div class="progress-step">
-                  <span style="font-size: 12px;">•</span>
-                  <span class="progress-label">Delivered</span>
+                
+                <div class="progress-step" style="flex: 1; text-align: center; position: relative; z-index: 2;">
+                  <div style="margin: 0 auto 10px; width: 30px; height: 30px; background-color: #E5E7EB; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6B7280; font-size: 16px; line-height: 1;">
+                    <span style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;">•</span>
+                  </div>
+                  <span class="progress-label" style="font-size: 14px; color: #6B7280; font-weight: 500;">Delivered</span>
                 </div>
               </div>
               
@@ -838,172 +851,332 @@ export const sendShippingNotificationEmail = async (
               </div>
             </div>
             
-            <!-- Delivery estimate -->
-            <div class="info-card" style="background: linear-gradient(165deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 16px; padding: 1.8rem; margin: 2rem 0; border-left: 4px solid #059669; position: relative;">
-              <h3 style="margin-top: 0; color: #065F46; font-weight: 600; font-size: 20px; position: relative; z-index: 2;">Estimated Delivery</h3>
+            <!-- Simple Order Progress Tracker - No SVG, simple HTML -->
+            <div style="margin: 20px 0; position: relative;">
+              <h3 style="margin-top: 0; margin-bottom: 10px; color: #111827; font-weight: 600; font-size: 18px;">Order Status</h3>
               
-              <div style="position: relative; z-index: 2; background-color: rgba(255, 255, 255, 0.7); padding: 15px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                  <div style="background-color: #065F46; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                    <span>📅</span>
-                  </div>
-                  <div>
-                    <p style="margin: 0; color: #065F46; font-weight: 600; font-size: 16px;">Expected to arrive in 3-5 business days</p>
-                    <p style="margin: 5px 0 0; color: #6B7280; font-size: 14px;">${new Date(new Date().setDate(new Date().getDate() + 5)).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</p>
-                  </div>
-                </div>
-                <p style="margin: 0; color: #6B7280; font-size: 14px; font-style: italic; padding-left: 55px;">Delivery times may vary based on your location and local delivery conditions.</p>
-              </div>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0fdf4; border-radius: 8px; margin: 10px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <!-- Order Placed -->
+                        <td align="center" width="25%" style="position: relative;">
+                          <div style="width: 20px; height: 20px; border-radius: 50%; background-color: #10b981; margin: 0 auto 6px;"></div>
+                          <div style="font-size: 12px; color: #111827; font-weight: 500;">Order Placed</div>
+                        </td>
+                        
+                        <!-- Processing -->
+                        <td align="center" width="25%" style="position: relative;">
+                          <div style="width: 20px; height: 20px; border-radius: 50%; background-color: #10b981; margin: 0 auto 6px;"></div>
+                          <div style="font-size: 12px; color: #111827; font-weight: 500;">Processing</div>
+                        </td>
+                        
+                        <!-- Shipped - Active -->
+                        <td align="center" width="25%" style="position: relative;">
+                          <div style="width: 20px; height: 20px; border-radius: 50%; background-color: #10b981; margin: 0 auto 6px;"></div>
+                          <div style="font-size: 12px; color: #10b981; font-weight: 700;">Shipped</div>
+                        </td>
+                        
+                        <!-- Delivered - Inactive -->
+                        <td align="center" width="25%" style="position: relative;">
+                          <div style="width: 20px; height: 20px; border-radius: 50%; background-color: #ffffff; border: 2px solid #d1d5db; margin: 0 auto 6px;"></div>
+                          <div style="font-size: 12px; color: #6b7280; font-weight: 500;">Delivered</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
               
-              <!-- Tracking button -->
-              <div style="margin-top: 25px; text-align: center; position: relative; z-index: 2;">
-                <a href="#" class="btn" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 30px; border-radius: 50px; text-decoration: none; font-weight: 600;">Track Your Package</a>
+              <!-- Simplified Delivery Estimate -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="40" valign="top">
+                          <div style="width: 36px; height: 36px; background-color: #10b981; border-radius: 50%; text-align: center; line-height: 36px; color: white; font-weight: bold; font-size: 14px;">27</div>
+                        </td>
+                        <td style="padding-left: 12px;">
+                          <h4 style="margin: 0 0 4px; color: #065f46; font-size: 15px; font-weight: 600;">Expected to arrive in 3-5 business days</h4>
+                          <p style="margin: 0 0 8px; color: #374151; font-weight: 500; font-size: 14px;">25 April 2025</p>
+                          <p style="margin: 0; color: #6b7280; font-size: 13px; font-style: italic;">Delivery times may vary based on your location and local delivery conditions.</p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    ${trackingId ? `
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 16px; border-top: 1px dashed #d1d5db; padding-top: 12px;">
+                      <tr>
+                        <td>
+                          <h5 style="margin: 0 0 8px; color: #065f46; font-size: 14px; font-weight: 600;">Tracking Information</h5>
+                          <p style="margin: 0 0 4px; color: #374151; font-size: 13px;">
+                            Tracking ID: <span style="font-family: monospace; font-weight: 600;">${trackingId}</span>
+                          </p>
+                          <p style="margin: 0; font-size: 13px; color: #6b7280;">
+                            You can use this tracking ID to monitor your package's journey.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>` : ''}
+                  </td>
+                </tr>
+              </table>
               </div>
             </div>
             
-            <!-- Shipping details -->
-            <div class="card" style="background: white; border-radius: 16px; padding: 2rem; margin: 2rem 0;">
-              <h3 style="margin-top: 0; color: #111827; font-weight: 600; font-size: 20px; border-bottom: 1px solid #E5E7EB; padding-bottom: 15px; margin-bottom: 20px;">Package Information</h3>
+            <!-- Shipping details - Clean modern design matching image_1745126763075.png -->
+            <div class="card" style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+              <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: #111827; font-weight: 600; font-size: 18px;">Package Information</h3>
               
-              <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 15px;">
-                <div class="mobile-stack" style="flex: 1; min-width: 200px; background-color: #F9FAFB; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
-                  <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <div style="width: 30px; height: 30px; background-color: #F0FDF4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: #059669;">📦</div>
-                    <h4 style="margin: 0; color: #4B5563; font-size: 16px; font-weight: 500;">Shipping Method</h4>
+              <!-- Shipping method and carrier cards - Matched with image_1745126763075.png -->
+              <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 1.5rem;">
+                <!-- Shipping Method Card -->
+                <div style="flex: 1; min-width: 230px; background-color: #f9fafb; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);">
+                  <div style="display: flex; align-items: center;">
+                    <div style="width: 36px; height: 36px; background-color: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10b981" width="18" height="18">
+                        <path d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25zM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h8.25c1.035 0 1.875-.84 1.875-1.875V15z"></path>
+                        <path d="M16.5 15.75h5.25c.966 0 1.75-.784 1.75-1.75V4.5c0-.966-.784-1.75-1.75-1.75H16.5v13z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 style="margin: 0; color: #4b5563; font-size: 14px; font-weight: 500;">Shipping Method</h4>
+                      <p style="margin: 4px 0 0; color: #111827; font-weight: 600; font-size: 15px;">Premium Express</p>
+                    </div>
                   </div>
-                  <p style="margin: 0; color: #111827; font-weight: 500; padding-left: 40px;">Premium Express Delivery</p>
                 </div>
                 
-                <div class="mobile-stack" style="flex: 1; min-width: 200px; background-color: #F9FAFB; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
-                  <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <div style="width: 30px; height: 30px; background-color: #F0FDF4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: #059669;">🚚</div>
-                    <h4 style="margin: 0; color: #4B5563; font-size: 16px; font-weight: 500;">Carrier</h4>
+                <!-- Carrier Card -->
+                <div style="flex: 1; min-width: 230px; background-color: #f9fafb; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);">
+                  <div style="display: flex; align-items: center;">
+                    <div style="width: 36px; height: 36px; background-color: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10b981" width="18" height="18">
+                        <path d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25zM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h8.25c1.035 0 1.875-.84 1.875-1.875V15z"></path>
+                        <path d="M16.5 15.75h5.25c.966 0 1.75-.784 1.75-1.75V4.5c0-.966-.784-1.75-1.75-1.75H16.5v13z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 style="margin: 0; color: #4b5563; font-size: 14px; font-weight: 500;">Carrier</h4>
+                      <p style="margin: 4px 0 0; color: #111827; font-weight: 600; font-size: 15px;">Delhivery Express</p>
+                    </div>
                   </div>
-                  <p style="margin: 0; color: #111827; font-weight: 500; padding-left: 40px;">Delhivery Express</p>
                 </div>
               </div>
               
-              <div class="divider" style="height: 1px; background: linear-gradient(90deg, transparent, #d1d5db, transparent); margin: 1.8rem 0;"></div>
-              
-              <div style="background-color: #F0FDF4; border-radius: 8px; padding: 15px; position: relative; overflow: hidden;">
-                <h4 style="margin: 0 0 15px; color: #065F46; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
-                  <span style="display: inline-block; width: 24px; height: 24px; background-color: #065F46; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 12px;">!</span>
-                  Important Information
-                </h4>
-                <ul style="margin: 10px 0; padding-left: 34px; color: #4B5563; list-style-type: none;">
-                  <li style="margin-bottom: 10px; position: relative;">
-                    <span style="position: absolute; left: -20px; color: #059669;">✓</span>
-                    Your package may require a signature upon delivery.
-                  </li>
-                  <li style="margin-bottom: 10px; position: relative;">
-                    <span style="position: absolute; left: -20px; color: #059669;">✓</span>
-                    Please ensure someone is available to receive the package.
-                  </li>
-                  <li style="position: relative;">
-                    <span style="position: absolute; left: -20px; color: #059669;">✓</span>
-                    If you miss the delivery, the carrier will leave instructions for rescheduling.
-                  </li>
-                </ul>
-                
-                <!-- Background decorative element -->
-                <div style="position: absolute; bottom: -10px; right: -10px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(5, 150, 105, 0.1) 0%, rgba(5, 150, 105, 0) 70%); border-radius: 50%;"></div>
-              </div>
+              <!-- Important Information - Table-based implementation of image_1745126763075.png -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0fdf4; border-radius: 8px; margin-top: 1rem;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="30" valign="top">
+                          <div style="width: 28px; height: 28px; background-color: #10b981; border-radius: 50%;"></div>
+                        </td>
+                        <td style="padding-left: 8px;">
+                          <h4 style="margin: 0; color: #065f46; font-size: 15px; font-weight: 600;">Important Information</h4>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 12px;">
+                      <tr>
+                        <td width="20" valign="top" style="padding-top: 3px;">
+                          <span style="color: #10b981; font-size: 14px; font-weight: bold;">✓</span>
+                        </td>
+                        <td style="font-size: 14px; color: #374151; padding-bottom: 8px;">
+                          Your package may require a signature upon delivery.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="20" valign="top" style="padding-top: 3px;">
+                          <span style="color: #10b981; font-size: 14px; font-weight: bold;">✓</span>
+                        </td>
+                        <td style="font-size: 14px; color: #374151; padding-bottom: 8px;">
+                          Please ensure someone is available to receive the package.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="20" valign="top" style="padding-top: 3px;">
+                          <span style="color: #10b981; font-size: 14px; font-weight: bold;">✓</span>
+                        </td>
+                        <td style="font-size: 14px; color: #374151;">
+                          If you miss the delivery, the carrier will leave instructions for rescheduling.
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </div>
             
-            <!-- Product details preview -->
-            <div class="card" style="background: linear-gradient(165deg, #ffffff 0%, #f9fafb 100%); border-radius: 16px; padding: 2rem; margin: 2rem 0;">
-              <h3 style="margin-top: 0; color: #111827; font-weight: 600; font-size: 20px; border-bottom: 1px solid #E5E7EB; padding-bottom: 15px; margin-bottom: 20px;">What's In Your Package</h3>
+            <!-- Product details preview - Clean modern design with proper SVG icons -->
+            <div class="card" style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+              <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: #111827; font-weight: 600; font-size: 18px;">What's In Your Package</h3>
               
-              <div style="text-align: center; margin: 20px 0; color: #065F46;">
-                <div class="cursive-text" style="margin-bottom: 15px;">Premium Millet Products</div>
-                <p style="color: #4B5563; margin-bottom: 20px;">We've carefully selected and packed your order with love. Get ready to enjoy the best quality millets for your health journey!</p>
+              <div style="padding: 0 0.5rem;">
+                <p style="color: #4b5563; margin-bottom: 1.5rem; font-size: 14px; text-align: center;">We've carefully selected and packed your premium millet products with love. Get ready to enjoy nature's best quality for your health journey!</p>
                 
-                <div style="width: 100%; height: 4px; background: linear-gradient(90deg, transparent, rgba(5, 150, 105, 0.3), transparent); margin: 25px 0;"></div>
-                
-                <div style="display: flex; justify-content: center;">
-                  <div style="text-align: center; padding: 0 15px;">
-                    <div style="width: 60px; height: 60px; background-color: #F0FDF4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #059669; font-size: 28px; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);">🌱</div>
-                    <p style="margin: 0; color: #4B5563; font-size: 14px;">100% Natural</p>
+                <!-- Feature Icons Row - Clean modern design with SVG icons -->
+                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 1rem;">
+                  <!-- 100% Natural Feature -->
+                  <div style="text-align: center; padding: 0.75rem; flex: 1; min-width: 100px;">
+                    <div style="width: 48px; height: 48px; background-color: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.6rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10b981" width="24" height="24">
+                        <path fill-rule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177A7.547 7.547 0 016.648 6.61a.75.75 0 00-1.152.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 011.925-3.545 3.75 3.75 0 013.255 3.717z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <p style="margin: 0; color: #111827; font-size: 13px; font-weight: 600;">100% Natural</p>
                   </div>
-                  <div style="text-align: center; padding: 0 15px;">
-                    <div style="width: 60px; height: 60px; background-color: #F0FDF4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #059669; font-size: 28px; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);">🌿</div>
-                    <p style="margin: 0; color: #4B5563; font-size: 14px;">Organic</p>
+                  
+                  <!-- Organic Feature -->
+                  <div style="text-align: center; padding: 0.75rem; flex: 1; min-width: 100px;">
+                    <div style="width: 48px; height: 48px; background-color: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.6rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10b981" width="24" height="24">
+                        <path fill-rule="evenodd" d="M8.478 16.97A7.5 7.5 0 0112 15c2.708 0 5.085 1.422 6.442 3.56a.75.75 0 01-1.192.915A6 6 0 0012 16.5c-1.42 0-2.729.5-3.749 1.332a.75.75 0 01-.773.053zM18 19.5a.75.75 0 01.75.75.75.75 0 01-.75.75.75.75 0 01-.75-.75.75.75 0 01.75-.75zM12 4.5a.75.75 0 01.75.75.75.75 0 01-.75.75.75.75 0 01-.75-.75.75.75 0 01.75-.75zM6 15a.75.75 0 01.75.75.75.75 0 01-.75.75.75.75 0 01-.75-.75A.75.75 0 016 15zM2.217 13.803a.75.75 0 01.558-.906 7.547 7.547 0 014.124.086 7.545 7.545 0 01-3.125-2.517.75.75 0 111.104-1.014 6.044 6.044 0 003.757 2.022l.298.013a6.048 6.048 0 005.166-1.581.756.756 0 01.7-.21.75.75 0 01.265.167c.169.149.27.366.27.599 0 .297-.082.559-.253.792A7.543 7.543 0 0117.1 14.874a7.55 7.55 0 01-4.65.493 7.543 7.543 0 01-8.966-1.066.747.747 0 01-.233-.507.75.75 0 01-.034-.092z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <p style="margin: 0; color: #111827; font-size: 13px; font-weight: 600;">Organic</p>
                   </div>
-                  <div style="text-align: center; padding: 0 15px;">
-                    <div style="width: 60px; height: 60px; background-color: #F0FDF4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #059669; font-size: 28px; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);">❤️</div>
-                    <p style="margin: 0; color: #4B5563; font-size: 14px;">Heart Healthy</p>
+                  
+                  <!-- Heart Healthy Feature -->
+                  <div style="text-align: center; padding: 0.75rem; flex: 1; min-width: 100px;">
+                    <div style="width: 48px; height: 48px; background-color: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.6rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10b981" width="24" height="24">
+                        <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.11-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                      </svg>
+                    </div>
+                    <p style="margin: 0; color: #111827; font-size: 13px; font-weight: 600;">Heart Healthy</p>
+                  </div>
+                  
+                  <!-- Gluten Free Feature -->
+                  <div style="text-align: center; padding: 0.75rem; flex: 1; min-width: 100px;">
+                    <div style="width: 48px; height: 48px; background-color: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.6rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10b981" width="24" height="24">
+                        <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <p style="margin: 0; color: #111827; font-size: 13px; font-weight: 600;">Allergen-Free</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
           
-          <!-- Help and Support section -->
-          <div style="background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%); padding: 2.5rem 2rem; border-top: 1px solid #E5E7EB; position: relative;">
-            <div class="millet-decoration"></div>
-            
-            <h2 class="mobile-small-heading" style="margin: 0 0 30px; color: #111827; font-weight: 600; font-size: 24px; text-align: center; position: relative; z-index: 2;">Need Assistance?</h2>
-            
-            <div style="display: flex; flex-wrap: wrap; gap: 20px; margin: 25px 0; position: relative; z-index: 2;">
-              <!-- Email Support Card -->
-              <div class="card mobile-stack" style="flex: 1; min-width: 200px; background: white; border-radius: 16px; padding: 1.8rem; text-align: center;">
-                <div class="card-icon" style="width: 60px; height: 60px; background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #059669; font-size: 28px;">
-                  ✉
-                </div>
-                <h3 style="margin: 10px 0; color: #111827; font-size: 18px; font-weight: 600;">Email Support</h3>
-                <p style="margin: 0 0 20px; color: #6B7280; font-size: 14px;">Questions about your order? Our team is here to help you every step of the way.</p>
-                <a href="mailto:support@millikit.com" style="color: #059669; text-decoration: none; font-weight: 500; display: block; background-color: #F0FDF4; padding: 10px; border-radius: 8px; transition: all 0.3s;">support@millikit.com</a>
-              </div>
+          <!-- Help and Support section - Table-based implementation of image_1745126769443.png -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 1.5rem 0;">
+            <tr>
+              <td width="48%" valign="top" style="background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="padding: 1.5rem;">
+                      <!-- Email Icon -->
+                      <div style="width: 60px; height: 60px; background-color: #dcfce7; border-radius: 50%; margin: 0 auto 1rem; position: relative;">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                          <span style="color: #10b981; font-size: 24px;">✉</span>
+                        </div>
+                      </div>
+                      
+                      <h3 style="margin: 0 0 0.8rem; color: #111827; font-size: 18px; font-weight: 600;">Email Support</h3>
+                      <p style="margin: 0 0 1.2rem; color: #4b5563; font-size: 14px; line-height: 1.4;">Questions about your order? Our team is here to help you every step of the way.</p>
+                      <a href="mailto:support@millikit.com" style="color: #10b981; text-decoration: none; font-weight: 600; display: block; background-color: #ecfdf5; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);">
+                        support@millikit.com
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
               
-              <!-- Phone Support Card -->
-              <div class="card mobile-stack" style="flex: 1; min-width: 200px; background: white; border-radius: 16px; padding: 1.8rem; text-align: center;">
-                <div class="card-icon" style="width: 60px; height: 60px; background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #059669; font-size: 28px;">
-                  📞
-                </div>
-                <h3 style="margin: 10px 0; color: #111827; font-size: 18px; font-weight: 600;">Phone Support</h3>
-                <p style="margin: 0 0 20px; color: #6B7280; font-size: 14px;">Need immediate assistance? Call our dedicated customer support line.</p>
-                <a href="tel:+917548871552" style="color: #059669; text-decoration: none; font-weight: 500; display: block; background-color: #F0FDF4; padding: 10px; border-radius: 8px; transition: all 0.3s;">+91 7548871552</a>
+              <td width="4%" style="font-size: 1px;">&nbsp;</td>
+              
+              <td width="48%" valign="top" style="background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="padding: 1.5rem;">
+                      <!-- Phone Icon -->
+                      <div style="width: 60px; height: 60px; background-color: #dcfce7; border-radius: 50%; margin: 0 auto 1rem; position: relative;">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                          <span style="color: #10b981; font-size: 24px;">☎</span>
+                        </div>
+                      </div>
+                      
+                      <h3 style="margin: 0 0 0.8rem; color: #111827; font-size: 18px; font-weight: 600;">Phone Support</h3>
+                      <p style="margin: 0 0 1.2rem; color: #4b5563; font-size: 14px; line-height: 1.4;">Need immediate assistance? Call our dedicated customer support line.</p>
+                      <a href="tel:+917548871552" style="color: #10b981; text-decoration: none; font-weight: 600; display: block; background-color: #ecfdf5; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);">
+                        +91 7548871552
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          
+          <!-- Footer - Clean modern design with SVG icons -->
+          <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem 1.5rem; margin-top: 1.5rem; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+            <img src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 120px; margin-bottom: 1rem; height: auto;">
+            
+            <p style="margin: 0.5rem 0 1.2rem; font-style: italic; color: #4b5563; font-size: 14px;">Premium Millet Products for a Healthier Lifestyle</p>
+            
+            <!-- Navigation Links - Simplified flat design -->
+            <div style="margin: 1.5rem auto; max-width: 450px;">
+              <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                <a href="https://millik-1.onrender.com" style="color: #10b981; text-decoration: none; padding: 8px 12px; font-weight: 500; font-size: 14px; border-radius: 6px; background-color: #ecfdf5;">Home</a>
+                <a href="https://millik-1.onrender.com/products" style="color: #10b981; text-decoration: none; padding: 8px 12px; font-weight: 500; font-size: 14px; border-radius: 6px; background-color: #ecfdf5;">Products</a>
+                <a href="https://millik-1.onrender.com/about" style="color: #10b981; text-decoration: none; padding: 8px 12px; font-weight: 500; font-size: 14px; border-radius: 6px; background-color: #ecfdf5;">About Us</a>
+                <a href="https://millik-1.onrender.com/contact" style="color: #10b981; text-decoration: none; padding: 8px 12px; font-weight: 500; font-size: 14px; border-radius: 6px; background-color: #ecfdf5;">Contact</a>
               </div>
             </div>
-          </div>
-          
-          <!-- Footer -->
-          <div class="footer" style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); padding: 2.5rem 2rem; text-align: center; border-top: 1px solid #E5E7EB;">
-            <img src="https://i.postimg.cc/Zq2Q30cv/LOGO-removebg-preview.png" alt="${STORE_NAME}" style="max-width: 130px; margin-bottom: 20px;">
             
-            <p class="cursive-text" style="margin: 5px 0 20px; font-style: italic; font-weight: 500;">Premium Millet Products for a Healthier Lifestyle</p>
-            
-            <!-- Navigation Links -->
-            <div class="navigation-links" style="margin: 25px auto; display: inline-block; background: linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%); padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-              <a href="https://millik-1.onrender.com" style="color: #059669; text-decoration: none; margin: 0 12px; font-weight: 600; transition: all 0.3s;">Home</a>
-              <a href="https://millik-1.onrender.com/products" style="color: #059669; text-decoration: none; margin: 0 12px; font-weight: 600; transition: all 0.3s;">Products</a>
-              <a href="https://millik-1.onrender.com/about" style="color: #059669; text-decoration: none; margin: 0 12px; font-weight: 600; transition: all 0.3s;">About Us</a>
-              <a href="https://millik-1.onrender.com/contact" style="color: #059669; text-decoration: none; margin: 0 12px; font-weight: 600; transition: all 0.3s;">Contact</a>
+            <!-- Social Media Icons - With SVG icons -->
+            <div style="display: flex; justify-content: center; margin: 1.5rem 0; gap: 12px;">
+              <a href="#" style="text-decoration: none;">
+                <div style="width: 36px; height: 36px; background-color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="16" height="16">
+                    <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+                  </svg>
+                </div>
+              </a>
+              <a href="#" style="text-decoration: none;">
+                <div style="width: 36px; height: 36px; background-color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="16" height="16">
+                    <path d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" />
+                  </svg>
+                </div>
+              </a>
+              <a href="#" style="text-decoration: none;">
+                <div style="width: 36px; height: 36px; background-color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="16" height="16">
+                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                  </svg>
+                </div>
+              </a>
             </div>
             
-            <!-- Social Media Icons -->
-            <div class="social-icons" style="display: flex; justify-content: center; margin: 25px 0;">
-              <div class="social-icon" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; color: white; margin: 0 10px;">f</div>
-              <div class="social-icon" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; color: white; margin: 0 10px;">i</div>
-              <div class="social-icon" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; color: white; margin: 0 10px;">t</div>
-            </div>
+            <div style="height: 1px; background-color: #e5e7eb; margin: 1.2rem 0;"></div>
             
-            <div class="divider" style="height: 1px; background: linear-gradient(90deg, transparent, #d1d5db, transparent); margin: 1.5rem 0;"></div>
+            <p style="margin: 0.8rem 0; color: #6b7280; font-size: 13px;">&copy; ${new Date().getFullYear()} ${STORE_NAME}. All rights reserved.</p>
             
-            <p style="margin: 15px 0; color: #6B7280; font-size: 14px;">&copy; ${new Date().getFullYear()} ${STORE_NAME}. All rights reserved.</p>
-            
-            <p style="color: #9CA3AF; font-size: 12px; margin-top: 15px;">This is an automated email. Please do not reply to this message.</p>
+            <p style="color: #9ca3af; font-size: 12px; margin: 0.8rem 0 0;">This is an automated email. Please do not reply to this message.</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    return await sendEmail(
+    // Send the email
+    const emailResult = await sendEmail(
       email,
       `Your Order Has Been Shipped #${orderNumber} - ${STORE_NAME}`,
       html
     );
+    
+    // Return both the email result and the HTML for preview purposes
+    return {
+      ...emailResult,
+      html
+    };
   } catch (error) {
     console.error("Error sending shipping notification:", error);
     return {
@@ -1229,6 +1402,10 @@ export const sendOrderConfirmationEmail = async (
         padding: 20px !important;
       }
       
+      .mobile-narrow-padding {
+        padding: 1rem !important;
+      }
+      
       .mobile-hidden {
         display: none !important;
       }
@@ -1236,10 +1413,15 @@ export const sendOrderConfirmationEmail = async (
       .mobile-stack {
         display: block !important;
         width: 100% !important;
+        margin-bottom: 20px !important;
       }
       
       .mobile-small-text {
         font-size: 14px !important;
+      }
+      
+      .mobile-small-heading {
+        font-size: 20px !important;
       }
       
       .mobile-order-details {
@@ -1255,6 +1437,34 @@ export const sendOrderConfirmationEmail = async (
       
       .mobile-product-image {
         margin: 0 auto 15px !important;
+      }
+      
+      .navigation-links {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        padding: 10px 15px !important;
+      }
+      
+      .navigation-links a {
+        display: inline-block !important;
+        margin: 5px 8px !important;
+      }
+      
+      .social-icons {
+        margin: 15px 0 !important;
+      }
+      
+      .progress-tracker {
+        flex-wrap: wrap !important;
+      }
+      
+      .progress-tracker .progress-step {
+        margin-bottom: 15px !important;
+      }
+      
+      .progress-line {
+        display: none !important;
       }
     }
   </style>
@@ -1739,11 +1949,18 @@ export const sendOrderConfirmationEmail = async (
 </body>
 </html>`;
 
-    return await sendEmail(
+    // Send the email
+    const emailResult = await sendEmail(
       email,
       `Your Order Confirmation #${orderNumber} - ${STORE_NAME}`,
       html
     );
+    
+    // Return both the email result and the HTML for preview purposes
+    return {
+      ...emailResult,
+      html
+    };
   } catch (error) {
     console.error("Error sending order confirmation email:", error);
     return {

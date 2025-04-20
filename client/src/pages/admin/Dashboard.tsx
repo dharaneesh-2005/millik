@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
 import LogoLoader from "@/components/LogoLoader";
 import { DeleteProductDialog } from "@/components/admin/DeleteProductDialog";
+import { TrackingIdModal } from "@/components/admin/TrackingIdModal";
 import {
   Table,
   TableBody,
@@ -367,10 +368,23 @@ export default function AdminDashboard() {
     }
   };
 
-  const updateOrderStatus = async (orderId: number, status: OrderStatus, e?: React.MouseEvent) => {
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<Order | null>(null);
+  
+  const updateOrderStatus = async (orderId: number, status: OrderStatus, e?: React.MouseEvent, trackingId?: string) => {
     // Prevent default behavior if event is provided (e.g., from a button click in a form)
     if (e && e.preventDefault) {
       e.preventDefault();
+    }
+    
+    // If the status is "completed" and no tracking ID provided, show the tracking modal
+    if (status === "completed" && !trackingId) {
+      const orderToUpdate = orders.find(order => order.id === orderId);
+      if (orderToUpdate) {
+        setSelectedOrderForTracking(orderToUpdate);
+        setIsTrackingModalOpen(true);
+        return null; // Return early, will process when modal is confirmed
+      }
     }
     
     try {
@@ -380,13 +394,19 @@ export default function AdminDashboard() {
         description: "Updating order status",
       });
       
+      // Prepare request body - include trackingId if provided
+      const requestBody: any = { status };
+      if (trackingId) {
+        requestBody.trackingId = trackingId;
+      }
+      
       const response = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "x-admin-key": ADMIN_KEY,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(requestBody),
       });
       
       if (!response.ok) throw new Error("Failed to update order status");
@@ -406,7 +426,9 @@ export default function AdminDashboard() {
       // Dismiss loading toast and show success
       toast({
         title: "Success",
-        description: `Order status updated to ${status}`,
+        description: trackingId 
+          ? `Order marked as completed and tracking email sent` 
+          : `Order status updated to ${status}`,
       });
       
       return updatedOrder; // Return the updated order for any further processing
@@ -1048,7 +1070,7 @@ export default function AdminDashboard() {
           </motion.h1>
           <div className="flex space-x-4 mt-4 md:mt-0 z-10">
             <Button variant="outline" asChild>
-              <Link href="/admin/products/new">
+              <Link href="/management-dashboard/products/new">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Link>
@@ -1059,7 +1081,7 @@ export default function AdminDashboard() {
               onClick={() => {
                 sessionStorage.removeItem("adminAuthenticated");
                 sessionStorage.removeItem("adminSessionId");
-                window.location.href = "/admin/login";
+                window.location.href = "/millikit-control-panel-secure";
                 toast({
                   title: "Logged out successfully",
                   description: "You have been logged out of the admin area",
@@ -1394,7 +1416,7 @@ export default function AdminDashboard() {
                                       <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuItem asChild>
-                                          <Link href={`/admin/products/${product.id}`}>
+                                          <Link href={`/management-dashboard/products/${product.id}`}>
                                             <Pencil className="mr-2 h-4 w-4" />
                                             <span>Edit</span>
                                           </Link>
@@ -1658,7 +1680,12 @@ export default function AdminDashboard() {
                               <SelectContent>
                                 <SelectItem value="pending">Pending</SelectItem>
                                 <SelectItem value="processing">Processing</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem value="completed">
+                                  <div className="flex items-center">
+                                    <Truck className="mr-2 h-4 w-4" />
+                                    Completed
+                                  </div>
+                                </SelectItem>
                                 <SelectItem value="failed">Failed</SelectItem>
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
                               </SelectContent>
@@ -1690,6 +1717,38 @@ export default function AdminDashboard() {
                                 "Failed"}
                               </Badge>
                             </div>
+                            
+                            {selectedOrder.status === "completed" && (
+                              <div className="col-span-2">
+                                <p className="text-sm text-muted-foreground">Tracking Information</p>
+                                {selectedOrder.trackingId ? (
+                                  <div className="flex items-center mt-1">
+                                    <Badge variant="outline" className="flex items-center gap-1">
+                                      <Truck className="h-3 w-3" />
+                                      Tracking ID: {selectedOrder.trackingId}
+                                    </Badge>
+                                    <span className="text-xs text-green-600 ml-2">
+                                      Tracking email sent to customer
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center mt-1">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex items-center gap-1"
+                                      onClick={() => {
+                                        setSelectedOrderForTracking(selectedOrder);
+                                        setIsTrackingModalOpen(true);
+                                      }}
+                                    >
+                                      <Truck className="h-3 w-3" />
+                                      Add Tracking ID
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1986,7 +2045,7 @@ export default function AdminDashboard() {
                           ))}
                           {products.filter(p => !p.inStock).length > 3 && (
                             <Button variant="link" className="text-xs" asChild>
-                              <Link href="/admin/products?stock=out-of-stock">
+                              <Link href="/management-dashboard/products?stock=out-of-stock">
                                 View all out of stock products
                               </Link>
                             </Button>
@@ -2032,7 +2091,7 @@ export default function AdminDashboard() {
                                   </span>
                                 </span>
                               </div>
-                              <Link href={`/admin/products/${product.id}`}>
+                              <Link href={`/management-dashboard/products/${product.id}`}>
                                 <Button 
                                   variant="outline" 
                                   size="sm"
@@ -2049,7 +2108,7 @@ export default function AdminDashboard() {
                             p.stockQuantity <= 5
                           ).length > 3 && (
                             <Button variant="link" className="text-xs" asChild>
-                              <Link href="/admin/products?stock=low-stock">
+                              <Link href="/management-dashboard/products?stock=low-stock">
                                 View all low stock products
                               </Link>
                             </Button>
@@ -2121,6 +2180,23 @@ export default function AdminDashboard() {
           }
         }}
       />
+      
+      {/* Order Tracking ID Modal */}
+      {selectedOrderForTracking && (
+        <TrackingIdModal
+          isOpen={isTrackingModalOpen}
+          onClose={() => {
+            setIsTrackingModalOpen(false);
+            setSelectedOrderForTracking(null);
+          }}
+          onConfirm={async (trackingId) => {
+            if (selectedOrderForTracking) {
+              await updateOrderStatus(selectedOrderForTracking.id, "completed", undefined, trackingId);
+            }
+          }}
+          orderNumber={selectedOrderForTracking.orderNumber}
+        />
+      )}
     </Layout>
   );
 }
